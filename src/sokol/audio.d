@@ -38,6 +38,7 @@ enum LogItem {
     Backend_buffer_size_isnt_multiple_of_packet_size,
     Vita_sceaudio_open_failed,
     Vita_pthread_create_failed,
+    N3ds_ndsp_open_failed,
 }
 /++
 + saudio_logger
@@ -62,6 +63,16 @@ extern(C) struct Allocator {
     extern(C) void function(void*, void*) free_fn = null;
     void* user_data = null;
 }
+enum N3dsNdspinterptype {
+    Dsp_interp_polyphase = 0,
+    Dsp_interp_linear = 1,
+    Dsp_interp_none = 2,
+}
+extern(C) struct N3dsDesc {
+    int queue_count = 0;
+    N3dsNdspinterptype interpolation_type = N3dsNdspinterptype.Dsp_interp_polyphase;
+    int channel_id = 0;
+}
 extern(C) struct Desc {
     int sample_rate = 0;
     int num_channels = 0;
@@ -71,6 +82,7 @@ extern(C) struct Desc {
     extern(C) void function(float*, int, int) stream_cb = null;
     extern(C) void function(float*, int, int, void*) stream_userdata_cb = null;
     void* user_data = null;
+    N3dsDesc n3ds = {};
     Allocator allocator = {};
     Logger logger = {};
 }
