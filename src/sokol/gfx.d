@@ -102,6 +102,7 @@ enum Backend {
     Metal_macos,
     Metal_simulator,
     Wgpu,
+    Vulkan,
     Dummy,
 }
 /++
@@ -264,6 +265,7 @@ extern(C) struct Limits {
     int gl_max_vertex_uniform_components = 0;
     int gl_max_combined_texture_image_units = 0;
     int d3d11_max_unordered_access_views = 0;
+    int vk_min_uniform_buffer_offset_alignment = 0;
 }
 /++
 + sg_resource_state
@@ -915,6 +917,16 @@ extern(C) struct WgpuSwapchain {
     const(void)* resolve_view = null;
     const(void)* depth_stencil_view = null;
 }
+extern(C) struct VulkanSwapchain {
+    const(void)* render_image = null;
+    const(void)* render_view = null;
+    const(void)* resolve_image = null;
+    const(void)* resolve_view = null;
+    const(void)* depth_stencil_image = null;
+    const(void)* depth_stencil_view = null;
+    const(void)* render_finished_semaphore = null;
+    const(void)* present_complete_semaphore = null;
+}
 extern(C) struct GlSwapchain {
     uint framebuffer = 0;
 }
@@ -927,6 +939,7 @@ extern(C) struct Swapchain {
     MetalSwapchain metal = {};
     D3d11Swapchain d3d11 = {};
     WgpuSwapchain wgpu = {};
+    VulkanSwapchain vulkan = {};
     GlSwapchain gl = {};
 }
 /++
@@ -1575,6 +1588,7 @@ extern(C) struct ShaderUniformBlock {
     ubyte hlsl_register_b_n = 0;
     ubyte msl_buffer_n = 0;
     ubyte wgsl_group0_binding_n = 0;
+    ubyte spirv_set0_binding_n = 0;
     UniformLayout layout = UniformLayout.Default;
     GlslShaderUniform[16] glsl_uniforms = [];
 }
@@ -1586,6 +1600,7 @@ extern(C) struct ShaderTextureView {
     ubyte hlsl_register_t_n = 0;
     ubyte msl_texture_n = 0;
     ubyte wgsl_group1_binding_n = 0;
+    ubyte spirv_set1_binding_n = 0;
 }
 extern(C) struct ShaderStorageBufferView {
     ShaderStage stage = ShaderStage.None;
@@ -1594,6 +1609,7 @@ extern(C) struct ShaderStorageBufferView {
     ubyte hlsl_register_u_n = 0;
     ubyte msl_buffer_n = 0;
     ubyte wgsl_group1_binding_n = 0;
+    ubyte spirv_set1_binding_n = 0;
     ubyte glsl_binding_n = 0;
 }
 extern(C) struct ShaderStorageImageView {
@@ -1604,6 +1620,7 @@ extern(C) struct ShaderStorageImageView {
     ubyte hlsl_register_u_n = 0;
     ubyte msl_texture_n = 0;
     ubyte wgsl_group1_binding_n = 0;
+    ubyte spirv_set1_binding_n = 0;
     ubyte glsl_binding_n = 0;
 }
 extern(C) struct ShaderView {
@@ -1617,6 +1634,7 @@ extern(C) struct ShaderSampler {
     ubyte hlsl_register_s_n = 0;
     ubyte msl_sampler_n = 0;
     ubyte wgsl_group1_binding_n = 0;
+    ubyte spirv_set1_binding_n = 0;
 }
 extern(C) struct ShaderTextureSamplerPair {
     ShaderStage stage = ShaderStage.None;
@@ -2147,6 +2165,18 @@ extern(C) struct FrameStatsWgpu {
     FrameStatsWgpuUniforms uniforms = {};
     FrameStatsWgpuBindings bindings = {};
 }
+extern(C) struct FrameStatsVk {
+    uint num_cmd_pipeline_barrier = 0;
+    uint num_allocate_memory = 0;
+    uint num_free_memory = 0;
+    uint size_allocate_memory = 0;
+    uint num_delete_queue_added = 0;
+    uint num_delete_queue_collected = 0;
+    uint num_cmd_copy_buffer = 0;
+    uint num_cmd_copy_buffer_to_image = 0;
+    uint num_cmd_set_descriptor_buffer_offsets = 0;
+    uint size_descriptor_buffer_writes = 0;
+}
 extern(C) struct ResourceStats {
     uint total_alive = 0;
     uint total_free = 0;
@@ -2183,6 +2213,7 @@ extern(C) struct FrameStats {
     FrameStatsD3d11 d3d11 = {};
     FrameStatsMetal metal = {};
     FrameStatsWgpu wgpu = {};
+    FrameStatsVk vk = {};
 }
 enum LogItem {
     Ok,
@@ -2273,6 +2304,41 @@ enum LogItem {
     Wgpu_create_pipeline_layout_failed,
     Wgpu_create_render_pipeline_failed,
     Wgpu_create_compute_pipeline_failed,
+    Vulkan_required_extension_function_missing,
+    Vulkan_alloc_device_memory_no_suitable_memory_type,
+    Vulkan_allocate_memory_failed,
+    Vulkan_alloc_buffer_device_memory_failed,
+    Vulkan_alloc_image_device_memory_failed,
+    Vulkan_delete_queue_exhausted,
+    Vulkan_staging_create_buffer_failed,
+    Vulkan_staging_allocate_memory_failed,
+    Vulkan_staging_bind_buffer_memory_failed,
+    Vulkan_staging_stream_buffer_overflow,
+    Vulkan_create_shared_buffer_failed,
+    Vulkan_allocate_shared_buffer_memory_failed,
+    Vulkan_bind_shared_buffer_memory_failed,
+    Vulkan_map_shared_buffer_memory_failed,
+    Vulkan_create_buffer_failed,
+    Vulkan_bind_buffer_memory_failed,
+    Vulkan_create_image_failed,
+    Vulkan_bind_image_memory_failed,
+    Vulkan_create_shader_module_failed,
+    Vulkan_uniformblock_spirv_set0_binding_out_of_range,
+    Vulkan_texture_spirv_set1_binding_out_of_range,
+    Vulkan_storagebuffer_spirv_set1_binding_out_of_range,
+    Vulkan_storageimage_spirv_set1_binding_out_of_range,
+    Vulkan_sampler_spirv_set1_binding_out_of_range,
+    Vulkan_create_descriptor_set_layout_failed,
+    Vulkan_create_pipeline_layout_failed,
+    Vulkan_create_graphics_pipeline_failed,
+    Vulkan_create_compute_pipeline_failed,
+    Vulkan_create_image_view_failed,
+    Vulkan_view_max_descriptor_size,
+    Vulkan_create_sampler_failed,
+    Vulkan_sampler_max_descriptor_size,
+    Vulkan_wait_for_fence_failed,
+    Vulkan_uniform_buffer_overflow,
+    Vulkan_descriptor_buffer_overflow,
     Identical_commit_listener,
     Commit_listener_array_full,
     Trace_hooks_not_enabled,
@@ -2378,6 +2444,7 @@ enum LogItem {
     Validate_shaderdesc_uniformblock_metal_buffer_slot_collision,
     Validate_shaderdesc_uniformblock_hlsl_register_b_collision,
     Validate_shaderdesc_uniformblock_wgsl_group0_binding_collision,
+    Validate_shaderdesc_uniformblock_spirv_set0_binding_collision,
     Validate_shaderdesc_uniformblock_no_members,
     Validate_shaderdesc_uniformblock_uniform_glsl_name,
     Validate_shaderdesc_uniformblock_size_mismatch,
@@ -2388,17 +2455,21 @@ enum LogItem {
     Validate_shaderdesc_view_storagebuffer_hlsl_register_u_collision,
     Validate_shaderdesc_view_storagebuffer_glsl_binding_collision,
     Validate_shaderdesc_view_storagebuffer_wgsl_group1_binding_collision,
+    Validate_shaderdesc_view_storagebuffer_spirv_set1_binding_collision,
     Validate_shaderdesc_view_storageimage_expect_compute_stage,
     Validate_shaderdesc_view_storageimage_metal_texture_slot_collision,
     Validate_shaderdesc_view_storageimage_hlsl_register_u_collision,
     Validate_shaderdesc_view_storageimage_glsl_binding_collision,
     Validate_shaderdesc_view_storageimage_wgsl_group1_binding_collision,
+    Validate_shaderdesc_view_storageimage_spirv_set1_binding_collision,
     Validate_shaderdesc_view_texture_metal_texture_slot_collision,
     Validate_shaderdesc_view_texture_hlsl_register_t_collision,
     Validate_shaderdesc_view_texture_wgsl_group1_binding_collision,
+    Validate_shaderdesc_view_texture_spirv_set1_binding_collision,
     Validate_shaderdesc_sampler_metal_sampler_slot_collision,
     Validate_shaderdesc_sampler_hlsl_register_s_collision,
     Validate_shaderdesc_sampler_wgsl_group1_binding_collision,
+    Validate_shaderdesc_sampler_spirv_set1_binding_collision,
     Validate_shaderdesc_texture_sampler_pair_view_slot_out_of_range,
     Validate_shaderdesc_texture_sampler_pair_sampler_slot_out_of_range,
     Validate_shaderdesc_texture_sampler_pair_texture_stage_mismatch,
@@ -2613,18 +2684,22 @@ enum LogItem {
 + 
 +     The default configuration is:
 + 
-+     .buffer_pool_size               128
-+     .image_pool_size                128
-+     .sampler_pool_size              64
-+     .shader_pool_size               32
-+     .pipeline_pool_size             64
-+     .view_pool_size                 256
-+     .uniform_buffer_size            4 MB (4*1024*1024)
-+     .max_commit_listeners           1024
-+     .disable_validation             false
-+     .mtl_force_managed_storage_mode false
-+     .wgpu_disable_bindgroups_cache  false
-+     .wgpu_bindgroups_cache_size     1024
++     .buffer_pool_size                   128
++     .image_pool_size                    128
++     .sampler_pool_size                  64
++     .shader_pool_size                   32
++     .pipeline_pool_size                 64
++     .view_pool_size                     256
++     .uniform_buffer_size                4 MB (4*1024*1024)
++     .max_commit_listeners               1024
++     .disable_validation                 false
++     .metal.force_managed_storage_mode   false
++     .metal.use_command_buffer_with_retained_references  false
++     .wgpu.disable_bindgroups_cache      false
++     .wgpu.bindgroups_cache_size         1024
++     .vulkan.copy_staging_buffer_size    4 MB
++     .vulkan.stream_staging_buffer_size  16 MB
++     .vulkan.descriptor_buffer_size      16 MB
 + 
 +     .allocator.alloc_fn     0 (in this case, malloc() will be called)
 +     .allocator.free_fn      0 (in this case, free() will be called)
@@ -2645,11 +2720,11 @@ enum LogItem {
 +         must hold a strong reference to the Objective-C object until sg_setup()
 +         returns.
 + 
-+         .mtl_force_managed_storage_mode
++         .metal.force_managed_storage_mode
 +             when enabled, Metal buffers and texture resources are created in managed storage
 +             mode, otherwise sokol-gfx will decide whether to create buffers and
 +             textures in managed or shared storage mode (this is mainly a debugging option)
-+         .mtl_use_command_buffer_with_retained_references
++         .metal.use_command_buffer_with_retained_references
 +             when true, the sokol-gfx Metal backend will use Metal command buffers which
 +             bump the reference count of resource objects as long as they are inflight,
 +             this is slower than the default command-buffer-with-unretained-references
@@ -2664,7 +2739,7 @@ enum LogItem {
 +             before sg_setup() is called
 +         .environment.d3d11.device_context
 +             a pointer to the ID3D11DeviceContext object
-+         .d3d11_shader_debugging
++         .d3d11.shader_debugging
 +             set this to true to compile shaders which are provided as HLSL source
 +             code with debug information and without optimization, this allows
 +             shader debugging in tools like RenderDoc, to output source code
@@ -2672,11 +2747,11 @@ enum LogItem {
 +             option
 + 
 +     WebGPU specific:
-+         .wgpu_disable_bindgroups_cache
++         .wgpu.disable_bindgroups_cache
 +             When this is true, the WebGPU backend will create and immediately
 +             release a BindGroup object in the sg_apply_bindings() call, only
 +             use this for debugging purposes.
-+         .wgpu_bindgroups_cache_size
++         .wgpu.bindgroups_cache_size
 +             The size of the bindgroups cache for re-using BindGroup objects
 +             between sg_apply_bindings() calls. The smaller the cache size,
 +             the more likely are cache slot collisions which will cause
@@ -2687,6 +2762,29 @@ enum LogItem {
 +             NOTE: wgpu_bindgroups_cache_size must be a power-of-2 number!
 +         .environment.wgpu.device
 +             a WGPUDevice handle
++ 
++     Vulkan specific:
++         .vulkan.copy_staging_buffer_size
++             Size of the staging buffer in bytes for uploading the initial
++             content of buffers and images, and for updating
++             .usage.dynamic_update resources. The default is 4 MB,
++             bigger resource updates are split into multiple chunks
++             of the staging buffer size
++         .vulkan.stream_staging_buffer_size
++             Size of the staging buffer in bytes for updating .usage.stream_update
++             resources. The default is 16 MB. The size must be big enough
++             to accomodate all update into .usage.stream_update resources.
++             Any additional data will cause an error log message and
++             incomplete rendering. Note that the actually allocated size
++             will be twice as much because the stream-staging-buffer is
++             double-buffered.
++         .vulkan.descriptor_buffer_size
++             Size of the descriptor-upload buffer in bytes. The default
++             size is 16 bytes. The size must be big enough to accomodate
++             all unifrom-block, view- and sampler-bindings in a single
++             frame (assume a worst-case of 256 bytes per binding). Note
++             that the actually allocated size will be twice as much
++             because the descriptor-buffer is double-buffered.
 + 
 +     When using sokol_gfx.h and sokol_app.h together, consider using the
 +     helper function sglue_environment() in the sokol_glue.h header to
@@ -2709,11 +2807,18 @@ extern(C) struct D3d11Environment {
 extern(C) struct WgpuEnvironment {
     const(void)* device = null;
 }
+extern(C) struct VulkanEnvironment {
+    const(void)* physical_device = null;
+    const(void)* device = null;
+    const(void)* queue = null;
+    uint queue_family_index = 0;
+}
 extern(C) struct Environment {
     EnvironmentDefaults defaults = {};
     MetalEnvironment metal = {};
     D3d11Environment d3d11 = {};
     WgpuEnvironment wgpu = {};
+    VulkanEnvironment vulkan = {};
 }
 /++
 + sg_commit_listener
@@ -2756,6 +2861,22 @@ extern(C) struct Logger {
     extern(C) void function(const(char)*, uint, uint, const(char)*, uint, const(char)*, void*) func = null;
     void* user_data = null;
 }
+extern(C) struct D3d11Desc {
+    bool shader_debugging = false;
+}
+extern(C) struct MetalDesc {
+    bool force_managed_storage_mode = false;
+    bool use_command_buffer_with_retained_references = false;
+}
+extern(C) struct WgpuDesc {
+    bool disable_bindgroups_cache = false;
+    int bindgroups_cache_size = 0;
+}
+extern(C) struct VulkanDesc {
+    int copy_staging_buffer_size = 0;
+    int stream_staging_buffer_size = 0;
+    int descriptor_buffer_size = 0;
+}
 extern(C) struct Desc {
     uint _start_canary = 0;
     int buffer_pool_size = 0;
@@ -2768,11 +2889,10 @@ extern(C) struct Desc {
     int max_commit_listeners = 0;
     bool disable_validation = false;
     bool enforce_portable_limits = false;
-    bool d3d11_shader_debugging = false;
-    bool mtl_force_managed_storage_mode = false;
-    bool mtl_use_command_buffer_with_retained_references = false;
-    bool wgpu_disable_bindgroups_cache = false;
-    int wgpu_bindgroups_cache_size = 0;
+    D3d11Desc d3d11 = {};
+    MetalDesc metal = {};
+    WgpuDesc wgpu = {};
+    VulkanDesc vulkan = {};
     Allocator allocator = {};
     Logger logger = {};
     Environment environment = {};

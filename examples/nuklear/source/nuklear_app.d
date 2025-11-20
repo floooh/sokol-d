@@ -120,7 +120,6 @@ void main() @safe nothrow
         enable_clipboard: true,
         width: 800,
         height: 600,
-        ios_keyboard_resizes_canvas: true,
         icon: {sokol_default: true},
         logger: {func: &log.func}
     };

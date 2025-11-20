@@ -15,7 +15,6 @@ void main()
 		cleanup_cb: &cleanup,
 		width: 640,
 		height: 480,
-		win32_console_attach: false,
 		icon: {sokol_default: true},
 		logger: {func: &log.func}
 	};
