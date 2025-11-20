@@ -430,9 +430,139 @@ enum LogItem {
     Wgpu_request_adapter_status_error,
     Wgpu_request_adapter_status_unknown,
     Wgpu_create_instance_failed,
+    Vulkan_alloc_device_memory_no_suitable_memory_type,
+    Vulkan_allocate_memory_failed,
+    Vulkan_create_instance_failed,
+    Vulkan_enumerate_physical_devices_failed,
+    Vulkan_no_physical_devices_found,
+    Vulkan_no_suitable_physical_device_found,
+    Vulkan_create_device_failed_extension_not_present,
+    Vulkan_create_device_failed_feature_not_present,
+    Vulkan_create_device_failed_initialization_failed,
+    Vulkan_create_device_failed_other,
+    Vulkan_create_surface_failed,
+    Vulkan_create_swapchain_failed,
+    Vulkan_swapchain_create_image_view_failed,
+    Vulkan_swapchain_create_image_failed,
+    Vulkan_swapchain_alloc_image_device_memory_failed,
+    Vulkan_swapchain_bind_image_memory_failed,
+    Vulkan_acquire_next_image_failed,
+    Vulkan_queue_present_failed,
     Image_data_size_mismatch,
     Dropped_file_path_too_long,
     Clipboard_string_too_big,
+}
+/++
++ sapp_pixel_format
++ 
++     Defines the pixel format for swapchain surfaces.
++ 
++     NOTE: when using sokol_gfx.h do not assume that the underlying
++     values are compatible with sg_pixel_format!
++/
+enum PixelFormat {
+    Default,
+    None,
+    Rgba8,
+    Srgb8a8,
+    Bgra8,
+    Sbgra8,
+    Depth,
+    Depth_stencil,
+}
+/++
++ sapp_environment
++ 
++     Used to provide runtime environment information to the
++     outside world (like default pixel formats and the backend
++     3D API device pointer) via a call to sapp_get_environment().
++ 
++     NOTE: when using sokol_gfx.h, don't assume that sapp_environment
++     is binary compatible with sg_environment! Always use a translation
++     function like sglue_environment() to populate sg_environment
++     from sapp_environment!
++/
+extern(C) struct EnvironmentDefaults {
+    PixelFormat color_format = PixelFormat.Default;
+    PixelFormat depth_format = PixelFormat.Default;
+    int sample_count = 0;
+}
+extern(C) struct MetalEnvironment {
+    const(void)* device = null;
+}
+extern(C) struct D3d11Environment {
+    const(void)* device = null;
+    const(void)* device_context = null;
+}
+extern(C) struct WgpuEnvironment {
+    const(void)* device = null;
+}
+extern(C) struct VulkanEnvironment {
+    const(void)* physical_device = null;
+    const(void)* device = null;
+    const(void)* queue = null;
+    uint queue_family_index = 0;
+}
+extern(C) struct Environment {
+    EnvironmentDefaults defaults = {};
+    MetalEnvironment metal = {};
+    D3d11Environment d3d11 = {};
+    WgpuEnvironment wgpu = {};
+    VulkanEnvironment vulkan = {};
+}
+/++
++ sapp_swapchain
++ 
++     Provides swapchain information for the current frame to the outside
++     world via a call to sapp_get_swapchain().
++ 
++     NOTE: sapp_get_swapchain() must be called exactly once per frame since
++     on some backends it will also acquire the next swapchain image.
++ 
++     NOTE: when using sokol_gfx.h, don't assume that the sapp_swapchain struct
++     has the same memory layout as sg_swapchain! Use the sokol_log.h helper
++     function sglue_swapchain() to translate sapp_swapchain into a
++     sg_swapchain instead.
++/
+extern(C) struct MetalSwapchain {
+    const(void)* current_drawable = null;
+    const(void)* depth_stencil_texture = null;
+    const(void)* msaa_color_texture = null;
+}
+extern(C) struct D3d11Swapchain {
+    const(void)* render_view = null;
+    const(void)* resolve_view = null;
+    const(void)* depth_stencil_view = null;
+}
+extern(C) struct WgpuSwapchain {
+    const(void)* render_view = null;
+    const(void)* resolve_view = null;
+    const(void)* depth_stencil_view = null;
+}
+extern(C) struct VulkanSwapchain {
+    const(void)* render_image = null;
+    const(void)* render_view = null;
+    const(void)* resolve_image = null;
+    const(void)* resolve_view = null;
+    const(void)* depth_stencil_image = null;
+    const(void)* depth_stencil_view = null;
+    const(void)* render_finished_semaphore = null;
+    const(void)* present_complete_semaphore = null;
+}
+extern(C) struct GlSwapchain {
+    uint framebuffer = 0;
+}
+extern(C) struct Swapchain {
+    int width = 0;
+    int height = 0;
+    int sample_count = 0;
+    PixelFormat color_format = PixelFormat.Default;
+    PixelFormat depth_format = PixelFormat.Default;
+    MetalSwapchain metal = {};
+    D3d11Swapchain d3d11 = {};
+    WgpuSwapchain wgpu = {};
+    VulkanSwapchain vulkan = {};
+    GlSwapchain gl = {};
 }
 /++
 + sapp_logger
@@ -451,6 +581,33 @@ extern(C) struct Logger {
 + sokol-app initialization options, used as return value of sokol_main()
 +     or sapp_run() argument.
 +/
+extern(C) struct GlDesc {
+    int major_version = 0;
+    int minor_version = 0;
+}
+extern(C) struct Win32Desc {
+    bool console_utf8 = false;
+    bool console_create = false;
+    bool console_attach = false;
+}
+extern(C) struct Html5Desc {
+    const(char)* canvas_selector = null;
+    bool canvas_resize = false;
+    bool preserve_drawing_buffer = false;
+    bool premultiplied_alpha = false;
+    bool ask_leave_site = false;
+    bool update_document_title = false;
+    bool bubble_mouse_events = false;
+    bool bubble_touch_events = false;
+    bool bubble_wheel_events = false;
+    bool bubble_key_events = false;
+    bool bubble_char_events = false;
+    bool use_emsc_set_main_loop = false;
+    bool emsc_set_main_loop_simulate_infinite_loop = false;
+}
+extern(C) struct IosDesc {
+    bool keyboard_resizes_canvas = false;
+}
 extern(C) struct Desc {
     extern(C) void function() init_cb = null;
     extern(C) void function() frame_cb = null;
@@ -477,25 +634,10 @@ extern(C) struct Desc {
     IconDesc icon = {};
     Allocator allocator = {};
     Logger logger = {};
-    int gl_major_version = 0;
-    int gl_minor_version = 0;
-    bool win32_console_utf8 = false;
-    bool win32_console_create = false;
-    bool win32_console_attach = false;
-    const(char)* html5_canvas_selector = null;
-    bool html5_canvas_resize = false;
-    bool html5_preserve_drawing_buffer = false;
-    bool html5_premultiplied_alpha = false;
-    bool html5_ask_leave_site = false;
-    bool html5_update_document_title = false;
-    bool html5_bubble_mouse_events = false;
-    bool html5_bubble_touch_events = false;
-    bool html5_bubble_wheel_events = false;
-    bool html5_bubble_key_events = false;
-    bool html5_bubble_char_events = false;
-    bool html5_use_emsc_set_main_loop = false;
-    bool html5_emsc_set_main_loop_simulate_infinite_loop = false;
-    bool ios_keyboard_resizes_canvas = false;
+    GlDesc gl = {};
+    Win32Desc win32 = {};
+    Html5Desc html5 = {};
+    IosDesc ios = {};
 }
 /++
 + HTML5 specific: request and response structs for
@@ -593,15 +735,15 @@ float heightf() @trusted @nogc nothrow pure {
 /++
 + get default framebuffer color pixel format
 +/
-extern(C) int sapp_color_format() @system @nogc nothrow pure;
-int colorFormat() @trusted @nogc nothrow pure {
+extern(C) PixelFormat sapp_color_format() @system @nogc nothrow pure;
+PixelFormat colorFormat() @trusted @nogc nothrow pure {
     return sapp_color_format();
 }
 /++
 + get default framebuffer depth pixel format
 +/
-extern(C) int sapp_depth_format() @system @nogc nothrow pure;
-int depthFormat() @trusted @nogc nothrow pure {
+extern(C) PixelFormat sapp_depth_format() @system @nogc nothrow pure;
+PixelFormat depthFormat() @trusted @nogc nothrow pure {
     return sapp_depth_format();
 }
 /++
@@ -815,6 +957,20 @@ void run(scope ref Desc desc) @trusted @nogc nothrow pure {
     sapp_run(&desc);
 }
 /++
++ get runtime environment information
++/
+extern(C) Environment sapp_get_environment() @system @nogc nothrow pure;
+Environment getEnvironment() @trusted @nogc nothrow pure {
+    return sapp_get_environment();
+}
+/++
++ get current frame's swapchain information (call once per frame!)
++/
+extern(C) Swapchain sapp_get_swapchain() @system @nogc nothrow pure;
+Swapchain getSwapchain() @trusted @nogc nothrow pure {
+    return sapp_get_swapchain();
+}
+/++
 + EGL: get EGLDisplay object
 +/
 extern(C) const(void)* sapp_egl_get_display() @system @nogc nothrow pure;
@@ -850,34 +1006,6 @@ void html5FetchDroppedFile(scope ref Html5FetchRequest request) @trusted @nogc n
     sapp_html5_fetch_dropped_file(&request);
 }
 /++
-+ Metal: get bridged pointer to Metal device object
-+/
-extern(C) const(void)* sapp_metal_get_device() @system @nogc nothrow pure;
-const(void)* metalGetDevice() @trusted @nogc nothrow pure {
-    return sapp_metal_get_device();
-}
-/++
-+ Metal: get bridged pointer to MTKView's current drawable of type CAMetalDrawable
-+/
-extern(C) const(void)* sapp_metal_get_current_drawable() @system @nogc nothrow pure;
-const(void)* metalGetCurrentDrawable() @trusted @nogc nothrow pure {
-    return sapp_metal_get_current_drawable();
-}
-/++
-+ Metal: get bridged pointer to MTKView's depth-stencil texture of type MTLTexture
-+/
-extern(C) const(void)* sapp_metal_get_depth_stencil_texture() @system @nogc nothrow pure;
-const(void)* metalGetDepthStencilTexture() @trusted @nogc nothrow pure {
-    return sapp_metal_get_depth_stencil_texture();
-}
-/++
-+ Metal: get bridged pointer to MTKView's msaa-color-texture of type MTLTexture (may be null)
-+/
-extern(C) const(void)* sapp_metal_get_msaa_color_texture() @system @nogc nothrow pure;
-const(void)* metalGetMsaaColorTexture() @trusted @nogc nothrow pure {
-    return sapp_metal_get_msaa_color_texture();
-}
-/++
 + macOS: get bridged pointer to macOS NSWindow
 +/
 extern(C) const(void)* sapp_macos_get_window() @system @nogc nothrow pure;
@@ -892,20 +1020,6 @@ const(void)* iosGetWindow() @trusted @nogc nothrow pure {
     return sapp_ios_get_window();
 }
 /++
-+ D3D11: get pointer to ID3D11Device object
-+/
-extern(C) const(void)* sapp_d3d11_get_device() @system @nogc nothrow pure;
-const(void)* d3d11GetDevice() @trusted @nogc nothrow pure {
-    return sapp_d3d11_get_device();
-}
-/++
-+ D3D11: get pointer to ID3D11DeviceContext object
-+/
-extern(C) const(void)* sapp_d3d11_get_device_context() @system @nogc nothrow pure;
-const(void)* d3d11GetDeviceContext() @trusted @nogc nothrow pure {
-    return sapp_d3d11_get_device_context();
-}
-/++
 + D3D11: get pointer to IDXGISwapChain object
 +/
 extern(C) const(void)* sapp_d3d11_get_swap_chain() @system @nogc nothrow pure;
@@ -913,67 +1027,11 @@ const(void)* d3d11GetSwapChain() @trusted @nogc nothrow pure {
     return sapp_d3d11_get_swap_chain();
 }
 /++
-+ D3D11: get pointer to ID3D11RenderTargetView object for rendering
-+/
-extern(C) const(void)* sapp_d3d11_get_render_view() @system @nogc nothrow pure;
-const(void)* d3d11GetRenderView() @trusted @nogc nothrow pure {
-    return sapp_d3d11_get_render_view();
-}
-/++
-+ D3D11: get pointer ID3D11RenderTargetView object for msaa-resolve (may return null)
-+/
-extern(C) const(void)* sapp_d3d11_get_resolve_view() @system @nogc nothrow pure;
-const(void)* d3d11GetResolveView() @trusted @nogc nothrow pure {
-    return sapp_d3d11_get_resolve_view();
-}
-/++
-+ D3D11: get pointer ID3D11DepthStencilView
-+/
-extern(C) const(void)* sapp_d3d11_get_depth_stencil_view() @system @nogc nothrow pure;
-const(void)* d3d11GetDepthStencilView() @trusted @nogc nothrow pure {
-    return sapp_d3d11_get_depth_stencil_view();
-}
-/++
 + Win32: get the HWND window handle
 +/
 extern(C) const(void)* sapp_win32_get_hwnd() @system @nogc nothrow pure;
 const(void)* win32GetHwnd() @trusted @nogc nothrow pure {
     return sapp_win32_get_hwnd();
-}
-/++
-+ WebGPU: get WGPUDevice handle
-+/
-extern(C) const(void)* sapp_wgpu_get_device() @system @nogc nothrow pure;
-const(void)* wgpuGetDevice() @trusted @nogc nothrow pure {
-    return sapp_wgpu_get_device();
-}
-/++
-+ WebGPU: get swapchain's WGPUTextureView handle for rendering
-+/
-extern(C) const(void)* sapp_wgpu_get_render_view() @system @nogc nothrow pure;
-const(void)* wgpuGetRenderView() @trusted @nogc nothrow pure {
-    return sapp_wgpu_get_render_view();
-}
-/++
-+ WebGPU: get swapchain's MSAA-resolve WGPUTextureView (may return null)
-+/
-extern(C) const(void)* sapp_wgpu_get_resolve_view() @system @nogc nothrow pure;
-const(void)* wgpuGetResolveView() @trusted @nogc nothrow pure {
-    return sapp_wgpu_get_resolve_view();
-}
-/++
-+ WebGPU: get swapchain's WGPUTextureView for the depth-stencil surface
-+/
-extern(C) const(void)* sapp_wgpu_get_depth_stencil_view() @system @nogc nothrow pure;
-const(void)* wgpuGetDepthStencilView() @trusted @nogc nothrow pure {
-    return sapp_wgpu_get_depth_stencil_view();
-}
-/++
-+ GL: get framebuffer object
-+/
-extern(C) uint sapp_gl_get_framebuffer() @system @nogc nothrow pure;
-uint glGetFramebuffer() @trusted @nogc nothrow pure {
-    return sapp_gl_get_framebuffer();
 }
 /++
 + GL: get major version
