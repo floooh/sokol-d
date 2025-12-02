@@ -5,6 +5,22 @@
 
 Auto-generated [D](https://dlang.org) bindings for the [sokol headers](https://github.com/floooh/sokol).
 
+#### Quickstart
+
+First in the root directory:
+
+```console
+dub build -c sokol-static
+```
+
+Then in the examples directory:
+
+```console
+dub :clear
+dub :triangle
+...
+```
+
 #### Targets
 
 By default, the backend 3D API will be selected based on the target platform:
@@ -41,25 +57,25 @@ dub init -t sokol-d <project-name>
 - sglpoints
 - triangle
 
-See [examples](examples)
+See [examples](examples/README.md)
 
 ### All Configurations
 
 ```bash
-dub build --print-configs    
+dub build --print-configs
 Available configurations:
     sokol-static [default]   # Static library build
     sokol-shared             # Shared/dynamic library build
     sokol-wayland-static     # Wayland static build for Linux
     sokol-wayland-shared     # Wayland shared build for Linux
     imgui-static             # Sokol + Dear ImGui static build
-    imgui-shared             # Sokol + Dear ImGui shared build  
+    imgui-shared             # Sokol + Dear ImGui shared build
     imgui-wgles3             # Sokol + Dear ImGui WebGL ES3 build
     imgui-wgpu               # Sokol + Dear ImGui WebGPU build
     sokol-wgles3             # WebGL ES3 build
     sokol-wgpu               # WebGPU build
     nuklear-static           # Sokol + Nuklear static build
-    nuklear-shared           # Sokol + Nuklear shared build  
+    nuklear-shared           # Sokol + Nuklear shared build
     nuklear-wgles3           # Sokol + Nuklear WebGL ES3 build
     nuklear-wgpu             # Sokol + Nuklear WebGPU build
     genshaders               # [re]Generate shader code
