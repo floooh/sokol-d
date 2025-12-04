@@ -2025,11 +2025,10 @@ extern(C) struct ViewInfo {
     SlotInfo slot = {};
 }
 /++
-+ sg_frame_stats
++ sg_stats
 + 
-+     Allows to track generic and backend-specific stats about a
-+     render frame. Obtained by calling sg_query_frame_stats(). The returned
-+     struct contains information about the *previous* frame.
++     Allows to track generic and backend-specific rendering stats,
++     obtained via sg_query_stats().
 +/
 extern(C) struct FrameStatsGl {
     uint num_bind_buffer = 0;
@@ -2177,13 +2176,27 @@ extern(C) struct FrameStatsVk {
     uint num_cmd_set_descriptor_buffer_offsets = 0;
     uint size_descriptor_buffer_writes = 0;
 }
-extern(C) struct ResourceStats {
-    uint total_alive = 0;
-    uint total_free = 0;
+extern(C) struct FrameResourceStats {
     uint allocated = 0;
     uint deallocated = 0;
     uint inited = 0;
     uint uninited = 0;
+}
+extern(C) struct TotalResourceStats {
+    uint alive = 0;
+    uint free = 0;
+    uint allocated = 0;
+    uint deallocated = 0;
+    uint inited = 0;
+    uint uninited = 0;
+}
+extern(C) struct TotalStats {
+    TotalResourceStats buffers = {};
+    TotalResourceStats images = {};
+    TotalResourceStats samplers = {};
+    TotalResourceStats views = {};
+    TotalResourceStats shaders = {};
+    TotalResourceStats pipelines = {};
 }
 extern(C) struct FrameStats {
     uint frame_index = 0;
@@ -2203,17 +2216,22 @@ extern(C) struct FrameStats {
     uint size_update_buffer = 0;
     uint size_append_buffer = 0;
     uint size_update_image = 0;
-    ResourceStats buffers = {};
-    ResourceStats images = {};
-    ResourceStats samplers = {};
-    ResourceStats views = {};
-    ResourceStats shaders = {};
-    ResourceStats pipelines = {};
+    FrameResourceStats buffers = {};
+    FrameResourceStats images = {};
+    FrameResourceStats samplers = {};
+    FrameResourceStats views = {};
+    FrameResourceStats shaders = {};
+    FrameResourceStats pipelines = {};
     FrameStatsGl gl = {};
     FrameStatsD3d11 d3d11 = {};
     FrameStatsMetal metal = {};
     FrameStatsWgpu wgpu = {};
     FrameStatsVk vk = {};
+}
+extern(C) struct Stats {
+    FrameStats prev_frame = {};
+    FrameStats cur_frame = {};
+    TotalStats total = {};
 }
 enum LogItem {
     Ok,
@@ -3381,23 +3399,23 @@ void failView(View view) @trusted @nogc nothrow pure {
     sg_fail_view(view);
 }
 /++
-+ frame stats
++ frame and total stats
 +/
-extern(C) void sg_enable_frame_stats() @system @nogc nothrow pure;
-void enableFrameStats() @trusted @nogc nothrow pure {
-    sg_enable_frame_stats();
+extern(C) void sg_enable_stats() @system @nogc nothrow pure;
+void enableStats() @trusted @nogc nothrow pure {
+    sg_enable_stats();
 }
-extern(C) void sg_disable_frame_stats() @system @nogc nothrow pure;
-void disableFrameStats() @trusted @nogc nothrow pure {
-    sg_disable_frame_stats();
+extern(C) void sg_disable_stats() @system @nogc nothrow pure;
+void disableStats() @trusted @nogc nothrow pure {
+    sg_disable_stats();
 }
-extern(C) bool sg_frame_stats_enabled() @system @nogc nothrow pure;
-bool frameStatsEnabled() @trusted @nogc nothrow pure {
-    return sg_frame_stats_enabled();
+extern(C) bool sg_stats_enabled() @system @nogc nothrow pure;
+bool statsEnabled() @trusted @nogc nothrow pure {
+    return sg_stats_enabled();
 }
-extern(C) FrameStats sg_query_frame_stats() @system @nogc nothrow pure;
-FrameStats queryFrameStats() @trusted @nogc nothrow pure {
-    return sg_query_frame_stats();
+extern(C) Stats sg_query_stats() @system @nogc nothrow pure;
+Stats queryStats() @trusted @nogc nothrow pure {
+    return sg_query_stats();
 }
 /++
 + Backend-specific structs and functions, these may come in handy for mixing

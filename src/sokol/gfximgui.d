@@ -424,7 +424,7 @@ extern(C) struct FrameStatsWindow {
     bool open = false;
     bool disable_sokol_imgui_stats = false;
     bool in_sokol_imgui = false;
-    sg.FrameStats stats = {};
+    sg.Stats stats = {};
 }
 /++
 + sgimgui_allocator_t
