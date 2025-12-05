@@ -10,13 +10,11 @@ debug
 
 extern (C):
 
-    static sgimgui.Sgimgui sgctx;
-
     void __dbgui_setup(int sample_count) @safe @nogc nothrow
     {
         // setup debug inspection
         sgimgui.Desc desc = {};
-        sgimgui.init(sgctx, desc);
+        sgimgui.setup(desc);
 
         //dfmt off
         // setup the sokol-imgui utility
@@ -30,7 +28,7 @@ extern (C):
 
     void __dbgui_shutdown() @safe @nogc nothrow
     {
-        sgimgui.discard(sgctx);
+        sgimgui.shutdown();
         simgui.shutdown;
     }
 
@@ -48,10 +46,10 @@ extern (C):
         simgui.newFrame(sframe);
         if (cimgui.BeginMainMenuBar)
         {
-            sgimgui.drawMenu(sgctx, "sokol-gfx");
+            sgimgui.drawMenu("sokol-gfx");
             cimgui.EndMainMenuBar;
         }
-        sgimgui.draw(sgctx);
+        sgimgui.draw();
         simgui.render;
     }
 
