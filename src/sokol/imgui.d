@@ -13,6 +13,7 @@ import sapp = sokol.app;
 enum LogItem {
     Ok,
     Malloc_failed,
+    Buffer_overflow,
 }
 /++
 + simgui_allocator_t
