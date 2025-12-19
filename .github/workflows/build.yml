@@ -96,7 +96,6 @@ jobs:
           dub build :sglpoints -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :triangle -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :texcube -c wasm -v --arch wasm32-unknown-emscripten-wasm
-          dub build :userdata -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :vertexpull -c wasm -v --arch wasm32-unknown-emscripten-wasm
 
   build-wgpu:
@@ -133,7 +132,6 @@ jobs:
           dub build :sglpoints -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :triangle -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :texcube -c wgpu -v --arch wasm32-unknown-emscripten-wasm
-          dub build :userdata -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :vertexpull -c wgpu -v --arch wasm32-unknown-emscripten-wasm
 
   archlinux-gdc:

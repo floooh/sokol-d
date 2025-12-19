@@ -49,7 +49,10 @@ void frame_userdata(scope void* userdata) @trusted
 
             try
             {
-                writeln(*state);
+                foreach (k, v; state.map)
+                {
+                    writeln("ExampleUserData[", k, "] = ", v);
+                }
             }
             catch (Exception)
             {
