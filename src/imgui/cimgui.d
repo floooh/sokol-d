@@ -1,4 +1,4 @@
-// Generated on 2025-10-16
+// Generated on 2025-12-19
 /++
 + D wrapper for cimgui (Dear ImGui).
 + Provides bindings for Dear ImGui immediate mode GUI library.
@@ -1015,7 +1015,7 @@ bool ComboCallbackEx(const(char)* label, scope int* current_item, ImGuiGetterCal
 
 /++
 + Widgets: Drag Sliders
-+  CTRL+Click on any drag box to turn them into an input box. Manually input values aren't clamped by default and can go offbounds. Use ImGuiSliderFlags_AlwaysClamp to always clamp.
++  Ctrl+Click on any drag box to turn them into an input box. Manually input values aren't clamped by default and can go offbounds. Use ImGuiSliderFlags_AlwaysClamp to always clamp.
 +  For all the Float2/Float3/Float4/Int2/Int3/Int4 versions of every function, note that a 'float v[X]' function argument is the same as 'float* v',
 + the array syntax is just a way to document the number of elements that are expected to be accessible. You can pass address of your first element out of a contiguous set, e.g.
 + &myvector
@@ -1025,7 +1025,7 @@ bool ComboCallbackEx(const(char)* label, scope int* current_item, ImGuiGetterCal
 +  Speed are perpixel of mouse movement (v_speed=0.2f: mouse needs to move by 5 pixels to increase value by 1). For keyboard/gamepad navigation, minimum speed is Max(v_speed, minimum_step_at_given_precision).
 +  Use v_min
 + <
-+ v_max to clamp edits to given limits. Note that CTRL+Click manual input can override those limits if ImGuiSliderFlags_AlwaysClamp is not used.
++ v_max to clamp edits to given limits. Note that Ctrl+Click manual input can override those limits if ImGuiSliderFlags_AlwaysClamp is not used.
 +  Use v_max = FLT_MAX / INT_MAX etc to avoid clamping to a maximum, same with v_min = FLT_MAX / INT_MIN to avoid clamping to a minimum.
 +  We use the same sets of flags for DragXXX() and SliderXXX() functions as the features are the same and it makes it easier to swap them.
 +  Legacy: Pre1.78 there are DragXXX() function signatures that take a final `float power=1.0f' argument instead of the `ImGuiSliderFlags flags=0' argument.
@@ -1153,7 +1153,7 @@ bool DragScalarNEx(const(char)* label, ImGuiDataType data_type, scope void* p_da
 
 /++
 + Widgets: Regular Sliders
-+  CTRL+Click on any slider to turn them into an input box. Manually input values aren't clamped by default and can go offbounds. Use ImGuiSliderFlags_AlwaysClamp to always clamp.
++  Ctrl+Click on any slider to turn them into an input box. Manually input values aren't clamped by default and can go offbounds. Use ImGuiSliderFlags_AlwaysClamp to always clamp.
 +  Adjust format string to decorate the value with a prefix, a suffix, or adapt the editing and display precision e.g. "%.3f" > 1.234; "%5.2f secs" > 01.23 secs; "Biscuit: %.0f" > Biscuit: 1; etc.
 +  Format string may also be set to NULL or use the default format ("%f" or "%d").
 +  Legacy: Pre1.78 there are SliderXXX() function signatures that take a final `float power=1.0f' argument instead of the `ImGuiSliderFlags flags=0' argument.
@@ -1301,7 +1301,7 @@ bool VSliderScalarEx(const(char)* label, ImVec2 size, ImGuiDataType data_type, s
 
 /++
 + Widgets: Input with Keyboard
-+  If you want to use InputText() with std::string or any custom dynamic string type, see misc/cpp/imgui_stdlib.h and comments in imgui_demo.cpp.
++  If you want to use InputText() with std::string or any custom dynamic string type, use the wrapper in misc/cpp/imgui_stdlib.h/.cpp!
 +  Most of the ImGuiInputTextFlags flags are only useful for InputText() and not for InputFloatX, InputIntX, InputDouble etc.
 +/
 bool InputText(const(char)* label, scope char* buf, size_t buf_size, ImGuiInputTextFlags flags) @trusted
@@ -1580,7 +1580,7 @@ bool SelectableBoolPtrEx(const(char)* label, scope bool* p_selected, ImGuiSelect
 
 /++
 + Multiselection system for Selectable(), Checkbox(), TreeNode() functions [BETA]
-+  This enables standard multiselection/rangeselection idioms (CTRL+Mouse/Keyboard, SHIFT+Mouse/Keyboard, etc.) in a way that also allow a clipper to be used.
++  This enables standard multiselection/rangeselection idioms (Ctrl+Mouse/Keyboard, Shift+Mouse/Keyboard, etc.) in a way that also allow a clipper to be used.
 +  ImGuiSelectionUserData is often used to store your item index within the current view (but may store something else).
 +  Read comments near ImGuiMultiSelectIO for instructions/details and see 'Demo>Widgets>Selection State
 + &
@@ -2222,7 +2222,7 @@ const(ImGuiPayload)* GetDragDropPayload() @trusted
 + Disabling [BETA API]
 +  Disable all user interactions and dim items visuals (applying style.DisabledAlpha over current colors)
 +  Those can be nested but it cannot be used to enable an already disabled section (a single BeginDisabled(true) in the stack is enough to keep everything disabled)
-+  Tooltips windows by exception are opted out of disabling.
++  Tooltips windows are automatically opted out of disabling. Note that IsItemHovered() by default returns false on disabled items, unless using ImGuiHoveredFlags_AllowWhenDisabled.
 +  BeginDisabled(false)/EndDisabled() essentially does nothing but is provided to facilitate use of boolean expressions (as a microoptimization: if you have tens of thousands of BeginDisabled(false)/EndDisabled() pairs, you might want to reformulate your code to avoid making those calls)
 +/
 void BeginDisabled(bool disabled) @trusted
@@ -2882,14 +2882,6 @@ bool ListBoxObsoleteEx(const(char)* label, scope int* current_item, ImGuiOld_cal
 }
 
 /++
-+ OBSOLETED in 1.89.7 (from June 2023)
-+/
-void SetItemAllowOverlap() @trusted
-{
-    igSetItemAllowOverlap();
-}
-
-/++
 + Windows
 + We should always have a CurrentWindow in the stack (there is an implicit "Debug" window)
 + If this ever crashes because g.CurrentWindow is NULL, it means that either:
@@ -2944,6 +2936,11 @@ ImVec2 CalcWindowNextAutoFitSize(scope ImGuiWindow* window) @trusted
 bool IsWindowChildOf(scope ImGuiWindow* window, scope ImGuiWindow* potential_parent, bool popup_hierarchy) @trusted
 {
     return igIsWindowChildOf(window, potential_parent, popup_hierarchy);
+}
+
+bool IsWindowInBeginStack(scope ImGuiWindow* window) @trusted
+{
+    return igIsWindowInBeginStack(window);
 }
 
 bool IsWindowWithinBeginStackOf(scope ImGuiWindow* window, scope ImGuiWindow* potential_parent) @trusted
