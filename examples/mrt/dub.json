@@ -54,6 +54,13 @@
             }
         },
         {
+            "name": "linux-vulkan",
+            "targetType": "executable",
+            "subConfigurations": {
+                "sokol-d": "sokol-linux-vulkan"
+            }
+        },
+        {
             "name": "wasm",
             "targetType": "staticLibrary",
             "postGenerateCommands": [
