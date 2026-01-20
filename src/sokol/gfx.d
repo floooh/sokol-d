@@ -3591,6 +3591,13 @@ const(void)* mtlComputeCommandEncoder() @trusted @nogc nothrow pure {
     return sg_mtl_compute_command_encoder();
 }
 /++
++ Metal: return __bridge-casted MTLCommandQueue
++/
+extern(C) const(void)* sg_mtl_command_queue() @system @nogc nothrow pure;
+const(void)* mtlCommandQueue() @trusted @nogc nothrow pure {
+    return sg_mtl_command_queue();
+}
+/++
 + Metal: get internal __bridge-casted buffer resource objects
 +/
 extern(C) MtlBufferInfo sg_mtl_query_buffer_info(Buffer buf) @system @nogc nothrow pure;
