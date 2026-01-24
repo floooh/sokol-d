@@ -2347,6 +2347,7 @@ enum LogItem {
     Vulkan_storageimage_spirv_set1_binding_out_of_range,
     Vulkan_sampler_spirv_set1_binding_out_of_range,
     Vulkan_create_descriptor_set_layout_failed,
+    Vulkan_shader_uniform_descriptor_set_size_vs_cache_size,
     Vulkan_create_pipeline_layout_failed,
     Vulkan_create_graphics_pipeline_failed,
     Vulkan_create_compute_pipeline_failed,
