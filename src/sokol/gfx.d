@@ -2826,6 +2826,7 @@ extern(C) struct WgpuEnvironment {
     const(void)* device = null;
 }
 extern(C) struct VulkanEnvironment {
+    const(void)* instance = null;
     const(void)* physical_device = null;
     const(void)* device = null;
     const(void)* queue = null;

@@ -430,6 +430,7 @@ enum LogItem {
     Wgpu_request_adapter_status_error,
     Wgpu_request_adapter_status_unknown,
     Wgpu_create_instance_failed,
+    Vulkan_required_instance_extension_function_missing,
     Vulkan_alloc_device_memory_no_suitable_memory_type,
     Vulkan_allocate_memory_failed,
     Vulkan_create_instance_failed,
@@ -498,6 +499,7 @@ extern(C) struct WgpuEnvironment {
     const(void)* device = null;
 }
 extern(C) struct VulkanEnvironment {
+    const(void)* instance = null;
     const(void)* physical_device = null;
     const(void)* device = null;
     const(void)* queue = null;
