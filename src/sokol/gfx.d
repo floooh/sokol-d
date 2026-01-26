@@ -246,6 +246,7 @@ extern(C) struct Features {
     bool separate_buffer_types = false;
     bool draw_base_vertex = false;
     bool draw_base_instance = false;
+    bool dual_source_blending = false;
     bool gl_texture_views = false;
 }
 /++
@@ -710,6 +711,10 @@ enum BlendFactor {
     One_minus_blend_color,
     Blend_alpha,
     One_minus_blend_alpha,
+    Src1_color,
+    One_minus_src1_color,
+    Src1_alpha,
+    One_minus_src1_alpha,
     Num,
 }
 /++
@@ -2510,6 +2515,7 @@ enum LogItem {
     Validate_pipelinedesc_attr_semantics,
     Validate_pipelinedesc_shader_readonly_storagebuffers,
     Validate_pipelinedesc_blendop_minmax_requires_blendfactor_one,
+    Validate_pipelinedesc_dual_source_blending_not_supported,
     Validate_viewdesc_canary,
     Validate_viewdesc_unique_viewtype,
     Validate_viewdesc_any_viewtype,
