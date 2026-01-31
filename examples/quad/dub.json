@@ -54,7 +54,7 @@
             }
         },
         {
-            "name": "linux-vulkan",
+            "name": "vulkan",
             "targetType": "executable",
             "subConfigurations": {
                 "sokol-d": "sokol-vulkan"
