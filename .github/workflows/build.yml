@@ -19,7 +19,7 @@ jobs:
             compiler: dmd-latest
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@main
       - uses: egor-tensin/vs-shell@v2
         with:
           arch: x64
@@ -69,7 +69,7 @@ jobs:
         runs-on: [ubuntu-24.04-arm, ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@main
       - uses: dlang-community/setup-dlang@v2
         with:
           compiler: ldc-master
@@ -105,7 +105,7 @@ jobs:
         runs-on: [ubuntu-24.04-arm, ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@main
       - uses: dlang-community/setup-dlang@v2
         with:
           compiler: ldc-master
@@ -144,7 +144,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@main
       - name: prepare-linux
         run: |
             pacman -Syu --noconfirm
@@ -171,3 +171,49 @@ jobs:
           dub build :texcube
           dub build :userdata
           dub build :vertexpull
+
+  build-vulkan:
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [ubuntu-24.04-arm, ubuntu-latest]
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@main
+      - uses: humbletim/setup-vulkan-sdk@main
+        with:
+          vulkan-query-version: 1.4.335.0
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-use-cache: true
+      - uses: dlang-community/setup-dlang@v2
+        with:
+          compiler: ldc-master
+      - name: prepare-linux
+        if: runner.os == 'Linux'
+        run: |
+            sudo apt-get update
+            sudo apt-get install libgl1-mesa-dev libegl1-mesa-dev mesa-common-dev xorg-dev libasound-dev libvulkan-dev
+      - name: (dub) Build sokol examples
+        working-directory: examples
+        run: |
+          dub build :blend -c linux-vulkan -v
+          dub build :bufferoffsets -c linux-vulkan -v
+          dub build :clear -c linux-vulkan -v
+          dub build :cube -c linux-vulkan -v
+          dub build :debugtext -c linux-vulkan -v
+          dub build :droptest -c linux-vulkan -v
+          dub build :imgui -c linux-vulkan -v
+          dub build :instancing -c linux-vulkan -v
+          dub build :instancingcompute -c linux-vulkan -v
+          dub build :mrt -c linux-vulkan -v
+          dub build :noninterleaved -c linux-vulkan -v
+          dub build :nuklear -c linux-vulkan -v
+          dub build :offscreen -c linux-vulkan -v
+          dub build :quad -c linux-vulkan -v
+          dub build :shapes -c linux-vulkan -v
+          dub build :saudio -c linux-vulkan -v
+          dub build :sglcontext -c linux-vulkan -v
+          dub build :sglpoints -c linux-vulkan -v
+          dub build :triangle -c linux-vulkan -v
+          dub build :texcube -c linux-vulkan -v
+          dub build :vertexpull -c linux-vulkan -v
