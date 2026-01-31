@@ -447,7 +447,6 @@
 			],
 			"preBuildCommands-linux": [
 				"mkdir -p $PACKAGE_DIR/build",
-				"$DC -run $PACKAGE_DIR/build.d --download-sokol-tools --backend=vulkan",
 				"gcc -DNDEBUG -DIMPL -DSOKOL_VULKAN -DSOKOL_DISABLE_WAYLAND -Wall -Wextra -Wno-unused-function -O2 -fPIE -c -o $PACKAGE_DIR/build/sokol_log.o $PACKAGE_DIR/src/sokol/c/sokol_log.c",
 				"gcc -DNDEBUG -DIMPL -DSOKOL_VULKAN -DSOKOL_DISABLE_WAYLAND -Wall -Wextra -Wno-unused-function -O2 -fPIE -c -o $PACKAGE_DIR/build/sokol_app.o $PACKAGE_DIR/src/sokol/c/sokol_app.c",
 				"gcc -DNDEBUG -DIMPL -DSOKOL_VULKAN -DSOKOL_DISABLE_WAYLAND -Wall -Wextra -Wno-unused-function -O2 -fPIE -c -o $PACKAGE_DIR/build/sokol_args.o $PACKAGE_DIR/src/sokol/c/sokol_args.c",
@@ -465,7 +464,6 @@
 			],
 			"preBuildCommands-windows": [
 				"powershell -Command \"mkdir -Force $PACKAGE_DIR\\build\"",
-				"$DC -run $PACKAGE_DIR\\build.d --download-sokol-tools --backend=vulkan",
 				"cl.exe /DNDEBUG /DIMPL /DSOKOL_VULKAN /I\"$VULKAN_SDK\\Include\" /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_log.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_log.c",
 				"cl.exe /DNDEBUG /DIMPL /DSOKOL_VULKAN /I\"$VULKAN_SDK\\Include\" /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_app.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_app.c",
 				"cl.exe /DNDEBUG /DIMPL /DSOKOL_VULKAN /I\"$VULKAN_SDK\\Include\" /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_args.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_args.c",
@@ -516,7 +514,6 @@
 			],
 			"preBuildCommands-windows": [
 				"powershell -Command \"mkdir -Force $PACKAGE_DIR\\build\"",
-				"$DC -run $PACKAGE_DIR\\build.d --download-sokol-tools --backend=d3d12",
 				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_log.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_log.c",
 				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_app.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_app.c",
 				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_args.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_args.c",
@@ -902,7 +899,7 @@
 			],
 			"preBuildCommands-linux": [
 				"mkdir -p $PACKAGE_DIR/build",
-				"$DC -run $PACKAGE_DIR/build.d --with-sokol-imgui --download-sokol-tools --backend=vulkan",
+				"$DC -run $PACKAGE_DIR/build.d --with-sokol-imgui --backend=vulkan",
 				"g++ -Wall -Wextra -Wno-unused-function -DNDEBUG -O2 -fPIE -c -o $PACKAGE_DIR/build/imgui.o $PACKAGE_DIR/vendor/imgui/src/imgui.cpp",
 				"g++ -Wall -Wextra -Wno-unused-function -DNDEBUG -O2 -fPIE -c -o $PACKAGE_DIR/build/imgui_demo.o $PACKAGE_DIR/vendor/imgui/src/imgui_demo.cpp",
 				"g++ -Wall -Wextra -Wno-unused-function -DNDEBUG -O2 -fPIE -c -o $PACKAGE_DIR/build/imgui_draw.o $PACKAGE_DIR/vendor/imgui/src/imgui_draw.cpp",
@@ -931,7 +928,7 @@
 			],
 			"preBuildCommands-windows": [
 				"powershell -Command \"mkdir -Force $PACKAGE_DIR\\build\"",
-				"$DC -run $PACKAGE_DIR/build.d --download-sokol-tools --with-sokol-imgui --backend=vulkan",
+				"$DC -run $PACKAGE_DIR/build.d --with-sokol-imgui --backend=vulkan",
 				"cl.exe /DNDEBUG /O2 /nologo /c /Fo$PACKAGE_DIR\\build\\imgui.obj $PACKAGE_DIR\\vendor\\imgui\\src\\imgui.cpp",
 				"cl.exe /DNDEBUG /O2 /nologo /c /Fo$PACKAGE_DIR\\build\\imgui_demo.obj $PACKAGE_DIR\\vendor\\imgui\\src\\imgui_demo.cpp",
 				"cl.exe /DNDEBUG /O2 /nologo /c /Fo$PACKAGE_DIR\\build\\imgui_draw.obj $PACKAGE_DIR\\vendor\\imgui\\src\\imgui_draw.cpp",
@@ -1491,6 +1488,23 @@
 			],
 			"preGenerateCommands": [
 				"$DC -run $PACKAGE_DIR/build.d --download-sokol-tools"
+			],
+			"postBuildCommands-posix": [
+				"rm $PACKAGE_DIR/*.a"
+			],
+			"postBuildCommands-windows": [
+				"powershell -Command Remove-Item $PACKAGE_DIR\\*.lib"
+			]
+		},
+		{
+			"name": "genshaders-vk",
+			"excludedSourceFiles": [
+				"src/sokol/*.d",
+				"src/imgui/*.d",
+				"src/nuklear/*.d"
+			],
+			"preGenerateCommands": [
+				"$DC -run $PACKAGE_DIR/build.d --download-sokol-tools --backend=vulkan"
 			],
 			"postBuildCommands-posix": [
 				"rm $PACKAGE_DIR/*.a"
