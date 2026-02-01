@@ -15,7 +15,7 @@
             "buildOptions": [
                 "debugMode",
                 "debugInfo"
-            ]        
+            ]
         },
         "release": {
             "buildOptions": [
@@ -48,6 +48,13 @@
             "targetType": "executable",
             "subConfigurations": {
                 "sokol-d": "nuklear-static"
+            }
+        },
+        {
+            "name": "vulkan",
+            "targetType": "executable",
+            "subConfigurations": {
+                "sokol-d": "nuklear-vulkan"
             }
         },
         {

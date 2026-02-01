@@ -26,8 +26,8 @@ dub :triangle
 By default, the backend 3D API will be selected based on the target platform:
 
 - macOS: Metal
-- Windows: D3D11
-- Linux: GL/Wayland
+- Windows: D3D11/Vulkan
+- Linux: GL/Wayland/Vulkan
 - Wasm (LDC2 required) - WebGL2/WebGPU support
 
 #### Usage - template project
@@ -52,6 +52,7 @@ dub init -t sokol-d <project-name>
 - imgui
 - instancing
 - instancingcompute
+- nuklear
 - saudio
 - sglcontext
 - sglpoints
@@ -68,17 +69,21 @@ Available configurations:
     sokol-shared             # Shared/dynamic library build
     sokol-wayland-static     # Wayland static build for Linux
     sokol-wayland-shared     # Wayland shared build for Linux
+    sokol-vulkan             # Sokol + Vulkan Static library build
     imgui-static             # Sokol + Dear ImGui static build
     imgui-shared             # Sokol + Dear ImGui shared build
+    imgui-vulkan             # Sokol + Dear ImGui + Vulkan static build
     imgui-wgles3             # Sokol + Dear ImGui WebGL ES3 build
     imgui-wgpu               # Sokol + Dear ImGui WebGPU build
     sokol-wgles3             # WebGL ES3 build
     sokol-wgpu               # WebGPU build
     nuklear-static           # Sokol + Nuklear static build
     nuklear-shared           # Sokol + Nuklear shared build
+    nuklear-vulkan           # Sokol + Nuklear + Vulkan static build
     nuklear-wgles3           # Sokol + Nuklear WebGL ES3 build
     nuklear-wgpu             # Sokol + Nuklear WebGPU build
     genshaders               # [re]Generate shader code
+    genshaders-vk            # [re]Generate vk-shader code
 ```
 
 ## Additional Build Options

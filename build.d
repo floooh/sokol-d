@@ -133,7 +133,7 @@ void main(string[] args) @safe
 
     // Execute build steps
     if (opts.downloadShdc)
-        buildShaders(vendorPath);
+        buildShaders(vendorPath, opts.backend);
     else if (opts.linkExample)
     {
         EmLinkOptions linkOpts = {
@@ -218,7 +218,7 @@ void getNuklear(string vendor) @safe
     }
 }
 
-void buildShaders(string vendor) @safe
+void buildShaders(string vendor, ref SokolBackend opts) @safe
 {
     immutable shdcPath = getSHDC(vendor);
     immutable shadersDir = "examples/shaders";
@@ -233,7 +233,7 @@ void buildShaders(string vendor) @safe
     else
         enum glsl = "glsl430";
 
-    immutable slangTemplate = glsl ~ ":metal_macos:hlsl5:%s:wgsl";
+    immutable slangTemplate = opts == SokolBackend.vulkan ? glsl ~ ":metal_macos:hlsl5:%s:wgsl:spirv_vk" : glsl ~ ":metal_macos:hlsl5:%s:wgsl";
 
     version (Posix)
         executeOrFail(["chmod", "+x", shdcPath], "Failed to set shader permissions", true);
@@ -278,7 +278,8 @@ enum SokolBackend
     metal,
     glcore,
     gles3,
-    wgpu
+    wgpu,
+    vulkan
 }
 
 struct LibSokolOptions
@@ -347,7 +348,8 @@ void buildLibSokol(LibSokolOptions opts) @safe
         lflags ~= opts.use_wayland ? [
             "-lwayland-client", "-lwayland-egl", "-lwayland-cursor", "-lxkbcommon"
         ] : [];
-        lflags ~= ["-lX11", "-lGL", "-lXi", "-lXcursor", "-lasound"];
+        lflags ~= opts.backend == SokolBackend.vulkan ? ["-lvulkan"] : ["-lGL"];
+        lflags ~= ["-lX11", "-lXi", "-lXcursor", "-lasound"];
         break;
     case "windows":
         cflags ~= ["/DNDEBUG", "/DIMPL", "/wd4190", "/O2"];

@@ -17,6 +17,7 @@ Available examples:
 - imgui
 - instancing
 - instancingcompute
+- nuklear
 - saudio
 - sglcontext
 - sglpoints
@@ -24,5 +25,5 @@ Available examples:
 
 Build command format:
 ```console
-dub :[example] -c [native|wasm|wgpu] -b [debug|release|release-nobounds|release-betterc]
+dub :[example] -c [native|vulkan|wasm|wgpu] -b [debug|release|release-nobounds|release-betterc]
 ```

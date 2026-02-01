@@ -19,8 +19,9 @@ jobs:
             compiler: dmd-latest
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@main
       - uses: egor-tensin/vs-shell@v2
+        if: runner.os == 'Windows'
         with:
           arch: x64
       - uses: dlang-community/setup-dlang@v2
@@ -69,7 +70,7 @@ jobs:
         runs-on: [ubuntu-24.04-arm, ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@main
       - uses: dlang-community/setup-dlang@v2
         with:
           compiler: ldc-master
@@ -105,7 +106,7 @@ jobs:
         runs-on: [ubuntu-24.04-arm, ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@main
       - uses: dlang-community/setup-dlang@v2
         with:
           compiler: ldc-master
@@ -144,7 +145,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@main
       - name: prepare-linux
         run: |
             pacman -Syu --noconfirm
@@ -171,3 +172,56 @@ jobs:
           dub build :texcube
           dub build :userdata
           dub build :vertexpull
+
+  build-vulkan:
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [ubuntu-24.04-arm, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@main
+      - uses: egor-tensin/vs-shell@v2
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - uses: humbletim/setup-vulkan-sdk@main
+        if: runner.os == 'Windows'
+        with:
+          vulkan-query-version: 1.4.335.0
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-use-cache: true
+      - uses: dlang-community/setup-dlang@v2
+        with:
+          compiler: ldc-master
+      - name: prepare-linux
+        if: runner.os == 'Linux'
+        run: |
+            sudo apt-get update
+            sudo apt-get install libgl1-mesa-dev libegl1-mesa-dev mesa-common-dev xorg-dev libasound-dev libvulkan-dev
+      - name: (dub) Running shdc
+        run: dub build -c genshaders-vk
+      - name: (dub) Build sokol examples
+        working-directory: examples
+        run: |
+          dub build :blend -c vulkan
+          dub build :bufferoffsets -c vulkan
+          dub build :clear -c vulkan
+          dub build :cube -c vulkan
+          dub build :debugtext -c vulkan
+          dub build :droptest -c vulkan
+          dub build :imgui -c vulkan
+          dub build :instancing -c vulkan
+          dub build :instancingcompute -c vulkan
+          dub build :mrt -c vulkan
+          dub build :noninterleaved -c vulkan
+          dub build :nuklear -c vulkan
+          dub build :offscreen -c vulkan
+          dub build :quad -c vulkan
+          dub build :shapes -c vulkan
+          dub build :saudio -c vulkan
+          dub build :sglcontext -c vulkan
+          dub build :sglpoints -c vulkan
+          dub build :triangle -c vulkan
+          dub build :texcube -c vulkan
+          dub build :vertexpull -c vulkan
