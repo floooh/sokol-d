@@ -275,7 +275,6 @@ enum SokolBackend
 {
     _auto,
     d3d11,
-    d3d12,
     metal,
     glcore,
     gles3,
@@ -354,9 +353,7 @@ void buildLibSokol(LibSokolOptions opts) @safe
         break;
     case "windows":
         cflags ~= ["/DNDEBUG", "/DIMPL", "/wd4190", "/O2"];
-        lflags ~= opts.backend == SokolBackend.d3d12 ? ["dxgi.lib", "d3d12.lib"] : [
-            "dxgi.lib", "d3d11.lib"
-        ];
+        lflags ~= ["dxgi.lib", "d3d11.lib"];
         break;
     case "wasm":
         cflags ~= ["-fPIE"];

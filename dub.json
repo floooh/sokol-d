@@ -481,56 +481,6 @@
 			]
 		},
 		{
-			"name": "sokol-windows-dx12",
-			"excludedSourceFiles": [
-				"src/sokol/*imgui.d",
-				"src/sokol/nuklear.d",
-				"src/emscripten/*.d",
-				"src/imgui/*.d",
-				"src/imgui/*.c",
-				"src/nuklear/*.d",
-				"src/nuklear/*.c"
-			],
-			"dflags-dmd": [
-				"-i=sokol",
-				"-i=shaders",
-				"-i=handmade",
-				"-i=nuklear"
-			],
-			"dflags-ldc": [
-				"-i=sokol",
-				"-i=shaders",
-				"-i=handmade",
-				"-mcpu=native"
-			],
-			"targetName": "sokold",
-			"targetPath": "build",
-			"libs": [
-				"sokol"
-			],
-			"libs-windows": [
-				"dxgi",
-				"d3d12"
-			],
-			"preBuildCommands-windows": [
-				"powershell -Command \"mkdir -Force $PACKAGE_DIR\\build\"",
-				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_log.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_log.c",
-				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_app.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_app.c",
-				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_args.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_args.c",
-				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_gfx.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_gfx.c",
-				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_time.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_time.c",
-				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_audio.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_audio.c",
-				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_gl.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_gl.c",
-				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_debugtext.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_debugtext.c",
-				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_shape.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_shape.c",
-				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_glue.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_glue.c",
-				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_fetch.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_fetch.c",
-				"cl.exe /DNDEBUG /DIMPL /DSOKOL_D3D12 /nologo /wd4190 /O2 /c /Fo$PACKAGE_DIR\\build\\sokol_memtrack.obj $PACKAGE_DIR\\src\\sokol\\c\\sokol_memtrack.c",
-				"lib.exe /nologo /OUT:$PACKAGE_DIR\\build\\sokol.lib $PACKAGE_DIR\\build\\*.obj",
-				"powershell -Command Remove-Item $PACKAGE_DIR\\build\\*.obj"
-			]
-		},
-		{
 			"name": "imgui-static",
 			"targetName": "cimguid",
 			"targetPath": "build",
