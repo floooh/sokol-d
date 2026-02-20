@@ -417,6 +417,17 @@ void buildLibSokol(LibSokolOptions opts) @safe
             "/nologo", "/wd4190",
             opts.optimize == "debug" ? "/Od": "/O2"
         ];
+        // For Vulkan backend, add the Vulkan SDK include path
+        if (opts.backend == SokolBackend.vulkan || resolveSokolBackend(opts.backend, opts.target) == SokolBackend
+            .vulkan)
+        {
+            immutable vulkanSdk = environment.get("VULKAN_SDK", "");
+            if (vulkanSdk.length)
+                cflags ~= "/I" ~ buildPath(vulkanSdk, "Include");
+            else
+                throw new Exception("VULKAN_SDK environment variable is not set. " ~
+                        "Install the Vulkan SDK from https://vulkan.lunarg.com/");
+        }
         // Windows libs are handled by DUB; lflags unused here but kept for
         // completeness if linkLibrary ever needs them.
     }
