@@ -127,7 +127,7 @@
 				"d3d11"
 			],
 			"preBuildCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --target=native"
+				"$DC -run $PACKAGE_DIR/build.d --target=native"
 			]
 		},
 		{
@@ -190,7 +190,7 @@
 				"d3d11"
 			],
 			"preBuildCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --linkage=dynamic --target=native"
+				"$DC -run $PACKAGE_DIR/build.d --linkage=dynamic --target=native"
 			]
 		},
 		{
@@ -230,7 +230,7 @@
 				"dl"
 			],
 			"preBuildCommands-linux": [
-				"$DC -run $PACKAGE_DIR/builder.d --enable-wayland --disable-x11 --target=native"
+				"$DC -run $PACKAGE_DIR/build.d --enable-wayland --disable-x11 --target=native"
 			]
 		},
 		{
@@ -271,7 +271,7 @@
 				"dl"
 			],
 			"preBuildCommands-linux": [
-				"$DC -run $PACKAGE_DIR/builder.d --enable-wayland --disable-x11 --linkage=dynamic"
+				"$DC -run $PACKAGE_DIR/build.d --enable-wayland --disable-x11 --linkage=dynamic"
 			]
 		},
 		{
@@ -322,7 +322,7 @@
 				"vulkan-1"
 			],
 			"preBuildCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --backend=vulkan --target=native"
+				"$DC -run $PACKAGE_DIR/build.d --backend=vulkan --target=native"
 			]
 		},
 		{
@@ -391,7 +391,7 @@
 				"AudioToolbox"
 			],
 			"preBuildCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --with-sokol-imgui --target=native"
+				"$DC -run $PACKAGE_DIR/build.d --with-sokol-imgui --target=native"
 			]
 		},
 		{
@@ -468,7 +468,7 @@
 				"AudioToolbox"
 			],
 			"preBuildCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --with-sokol-imgui --linkage=dynamic --target=native"
+				"$DC -run $PACKAGE_DIR/build.d --with-sokol-imgui --linkage=dynamic --target=native"
 			]
 		},
 		{
@@ -525,7 +525,7 @@
 				"vulkan-1"
 			],
 			"preBuildCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --with-sokol-imgui --backend=vulkan --target=native"
+				"$DC -run $PACKAGE_DIR/build.d --with-sokol-imgui --backend=vulkan --target=native"
 			]
 		},
 		{
@@ -549,7 +549,7 @@
 				"-gcc=$PACKAGE_DIR/vendor/emsdk/upstream/bin/wasm32-clang"
 			],
 			"preGenerateCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --target=wasm --with-sokol-imgui --verbose"
+				"$DC -run $PACKAGE_DIR/build.d --target=wasm --with-sokol-imgui --verbose"
 			]
 		},
 		{
@@ -573,7 +573,7 @@
 				"-gcc=$PACKAGE_DIR/vendor/emsdk/upstream/bin/wasm32-clang"
 			],
 			"preGenerateCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --target=wasm --backend=wgpu --with-sokol-imgui --verbose"
+				"$DC -run $PACKAGE_DIR/build.d --target=wasm --backend=wgpu --with-sokol-imgui --verbose"
 			]
 		},
 		{
@@ -603,7 +603,7 @@
 			"targetName": "sokold",
 			"targetPath": "build",
 			"preGenerateCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --target=wasm --verbose"
+				"$DC -run $PACKAGE_DIR/build.d --target=wasm --verbose"
 			]
 		},
 		{
@@ -630,7 +630,7 @@
 			"targetName": "sokold",
 			"targetPath": "build",
 			"preGenerateCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --target=wasm --backend=wgpu --verbose"
+				"$DC -run $PACKAGE_DIR/build.d --target=wasm --backend=wgpu --verbose"
 			]
 		},
 		{
@@ -696,7 +696,7 @@
 				"AudioToolbox"
 			],
 			"preBuildCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --with-sokol-nuklear --target=native --verbose"
+				"$DC -run $PACKAGE_DIR/build.d --with-sokol-nuklear --target=native --verbose"
 			]
 		},
 		{
@@ -768,7 +768,7 @@
 				"AudioToolbox"
 			],
 			"preBuildCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --with-sokol-nuklear --linkage=dynamic --target=native"
+				"$DC -run $PACKAGE_DIR/build.d --with-sokol-nuklear --linkage=dynamic --target=native"
 			]
 		},
 		{
@@ -823,7 +823,7 @@
 				"vulkan-1"
 			],
 			"preBuildCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --with-sokol-nuklear --backend=vulkan --target=native"
+				"$DC -run $PACKAGE_DIR/build.d --with-sokol-nuklear --backend=vulkan --target=native"
 			]
 		},
 		{
@@ -852,7 +852,7 @@
 				"-gcc=$PACKAGE_DIR/vendor/emsdk/upstream/bin/wasm32-clang"
 			],
 			"preGenerateCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --target=wasm --with-sokol-nuklear --verbose"
+				"$DC -run $PACKAGE_DIR/build.d --target=wasm --with-sokol-nuklear --verbose"
 			]
 		},
 		{
@@ -881,7 +881,7 @@
 				"-gcc=$PACKAGE_DIR/vendor/emsdk/upstream/bin/wasm32-clang"
 			],
 			"preGenerateCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --target=wasm --backend=wgpu --with-sokol-nuklear --verbose"
+				"$DC -run $PACKAGE_DIR/build.d --target=wasm --backend=wgpu --with-sokol-nuklear --verbose"
 			]
 		},
 		{
@@ -892,7 +892,7 @@
 				"src/nuklear/*.d"
 			],
 			"preGenerateCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --download-sokol-tools"
+				"$DC -run $PACKAGE_DIR/build.d --download-sokol-tools"
 			],
 			"postBuildCommands-posix": [
 				"rm $PACKAGE_DIR/*.a"
@@ -909,7 +909,7 @@
 				"src/nuklear/*.d"
 			],
 			"preGenerateCommands": [
-				"$DC -run $PACKAGE_DIR/builder.d --download-sokol-tools --backend=vulkan"
+				"$DC -run $PACKAGE_DIR/build.d --download-sokol-tools --backend=vulkan"
 			],
 			"postBuildCommands-posix": [
 				"rm $PACKAGE_DIR/*.a"
