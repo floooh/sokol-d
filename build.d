@@ -539,28 +539,23 @@ void buildLibSokol(LibSokolOptions opts) @safe
         immutable nuklearRoot = absolutePath(buildPath(opts.vendor, "nuklear"));
         enforce(exists(nuklearRoot), "Nuklear source not found. Run after setup.");
 
-        immutable nuklearcPath = absolutePath(buildPath("src", "nuklear", "c", "nuklearc.c"));
-        enforce(exists(nuklearcPath), "nuklearc.c not found in src/nuklear/c");
-
         immutable sokolNuklearPath = buildPath(opts.sokolSrcPath, "sokol_nuklear.c");
         enforce(exists(sokolNuklearPath), "sokol_nuklear.c not found");
 
-        string[] nuklearObjs;
-        foreach (tup; [
-            tuple(nuklearcPath, "nuklearc" ~ objExt(opts.target)),
-            tuple(sokolNuklearPath, "sokol_nuklear" ~ objExt(opts.target)),
-        ])
-        {
-            immutable objPath = buildPath(buildDir, tup[1]);
-            compileSource(tup[0], objPath, compiler, cflags ~ includeFlag(nuklearRoot, opts.target), opts.target, opts
-                    .verbose);
-            nuklearObjs ~= objPath;
-        }
+        // sokol_nuklear.c compiled with SOKOL_NUKLEAR_IMPL (triggered by -DIMPL)
+        // already includes nuklear.h with NK_IMPLEMENTATION internally.
+        // Compiling nuklearc.c separately would redefine every nk_* symbol → link error.
+        // Solution: only compile sokol_nuklear.c, passing the nuklear include path.
+        string[] nuklearFlags = cflags ~ includeFlag(nuklearRoot, opts.target);
+
+        immutable objPath = buildPath(buildDir, "sokol_nuklear" ~ objExt(opts.target));
+        compileSource(sokolNuklearPath, objPath, compiler, nuklearFlags, opts.target, opts.verbose);
 
         immutable nuklearLib = buildPath(buildDir, nuklearLibName(opts.target, opts.linkageStatic));
-        linkLibrary(nuklearLib, nuklearObjs, opts.target, opts.linkageStatic,
+        linkLibrary(nuklearLib, [objPath], opts.target, opts.linkageStatic,
             opts.vendor, lflags, opts.verbose);
-        nuklearObjs.each!(obj => exists(obj) && remove(obj));
+        if (exists(objPath))
+            remove(objPath);
     }
 }
 
