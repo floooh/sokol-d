@@ -440,7 +440,7 @@ void buildLibSokol(LibSokolOptions opts) @safe
         ];
 
         if (isMac)
-            cflags ~= ["-x", "objective-c", "-Wno-return-type-c-linkage"];
+            cflags ~= "-Wno-return-type-c-linkage";
 
         if (!isWasm)
         {
@@ -515,9 +515,14 @@ void buildLibSokol(LibSokolOptions opts) @safe
         "sokol_glue.c", "sokol_fetch.c", "sokol_memtrack.c", "sokol_args.c",
     ];
 
+    // On macOS the sokol .c headers use ObjC syntax — compile them as ObjC.
+    // This flag must NOT be in the shared cflags because it would force
+    // C++ source files (imgui) to be compiled as ObjC instead of C++.
+    string[] sokolCFlags = isMac ? cflags ~ ["-x", "objective-c"] : cflags;
+
     auto sokolObjs = compileSources(
         sokolSources, buildDir, opts.sokolSrcPath,
-        compiler, cflags, "sokol_", opts.target, opts.verbose);
+        compiler, sokolCFlags, "sokol_", opts.target, opts.verbose);
 
     immutable sokolLib = buildPath(buildDir, sokolLibName(opts.target, opts.linkageStatic));
     linkLibrary(sokolLib, sokolObjs, opts.target, opts.linkageStatic,
@@ -547,13 +552,15 @@ void buildLibSokol(LibSokolOptions opts) @safe
             imguiCompiler, imguiFlags, "imgui_", opts.target, opts.verbose);
 
         // sokol_imgui.c and sokol_gfx_imgui.c are C, compiled with the C compiler
+        // On macOS they also need -x objective-c (same reason as the core sokol sources)
         foreach (sokolImguiSrc; ["sokol_imgui.c", "sokol_gfx_imgui.c"])
         {
             immutable srcPath = buildPath(opts.sokolSrcPath, sokolImguiSrc);
             enforce(exists(srcPath), sokolImguiSrc ~ " not found");
             immutable objPath = buildPath(buildDir,
                 sokolImguiSrc.stripExtension ~ objExt(opts.target));
-            compileSource(srcPath, objPath, compiler, cflags ~ includeFlag(imguiRoot, opts.target),
+            compileSource(srcPath, objPath, compiler,
+                sokolCFlags ~ includeFlag(imguiRoot, opts.target),
                 opts.target, opts.verbose);
             imguiObjs ~= objPath;
         }
@@ -579,7 +586,8 @@ void buildLibSokol(LibSokolOptions opts) @safe
         // already includes nuklear.h with NK_IMPLEMENTATION internally.
         // Compiling nuklearc.c separately would redefine every nk_* symbol → link error.
         // Solution: only compile sokol_nuklear.c, passing the nuklear include path.
-        string[] nuklearFlags = cflags ~ includeFlag(nuklearRoot, opts.target);
+        // On macOS also needs -x objective-c (same as core sokol C sources).
+        string[] nuklearFlags = sokolCFlags ~ includeFlag(nuklearRoot, opts.target);
 
         immutable objPath = buildPath(buildDir, "sokol_nuklear" ~ objExt(opts.target));
         compileSource(sokolNuklearPath, objPath, compiler, nuklearFlags, opts.target, opts.verbose);
