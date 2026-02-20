@@ -50,9 +50,6 @@
 			]
 		}
 	},
-	"dflags-gdc": [
-		"-fpreview=all"
-	],
 	"dflags-dmd": [
 		"-verrors=context",
 		"-preview=all"
@@ -342,9 +339,6 @@
 				"-i=imgui",
 				"-P-I$PACKAGE_DIR/vendor/imgui/src"
 			],
-			"dflags-gdc": [
-				"-I$PACKAGE_DIR/vendor/imgui/src"
-			],
 			"dflags-ldc": [
 				"-i=sokol",
 				"-i=shaders",
@@ -411,9 +405,6 @@
 				"-i=handmade",
 				"-i=imgui",
 				"-P-I$PACKAGE_DIR/vendor/imgui/src"
-			],
-			"dflags-gdc": [
-				"-I$PACKAGE_DIR/vendor/imgui/src"
 			],
 			"dflags-ldc": [
 				"-i=sokol",
@@ -487,9 +478,6 @@
 				"-i=handmade",
 				"-i=imgui",
 				"-P-I$PACKAGE_DIR/vendor/imgui/src"
-			],
-			"dflags-gdc": [
-				"-I$PACKAGE_DIR/vendor/imgui/src"
 			],
 			"dflags-ldc": [
 				"-i=sokol",
@@ -649,9 +637,6 @@
 				"-i=nuklear",
 				"-P-I$PACKAGE_DIR/vendor/nuklear"
 			],
-			"dflags-gdc": [
-				"-I$PACKAGE_DIR/vendor/nuklear"
-			],
 			"dflags-ldc": [
 				"-i=sokol",
 				"-i=shaders",
@@ -715,9 +700,6 @@
 				"-i=handmade",
 				"-i=nuklear",
 				"-P-I$PACKAGE_DIR/vendor/nuklear"
-			],
-			"dflags-gdc": [
-				"-I$PACKAGE_DIR/vendor/nuklear"
 			],
 			"dflags-ldc": [
 				"-i=sokol",
@@ -786,9 +768,6 @@
 				"-i=handmade",
 				"-i=nuklear",
 				"-P-I$PACKAGE_DIR/vendor/nuklear"
-			],
-			"dflags-gdc": [
-				"-I$PACKAGE_DIR/vendor/nuklear"
 			],
 			"dflags-ldc": [
 				"-i=sokol",
