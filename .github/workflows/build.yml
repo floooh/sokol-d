@@ -51,6 +51,7 @@ jobs:
           dub build :instancingcompute
           dub build :mrt
           dub build :noninterleaved
+          dub build :nuklear
           dub build :offscreen
           dub build :quad
           dub build :shapes
@@ -214,6 +215,7 @@ jobs:
           dub build :instancingcompute -c vulkan
           dub build :mrt -c vulkan
           dub build :noninterleaved -c vulkan
+          dub build :nuklear -c vulkan
           dub build :offscreen -c vulkan
           dub build :quad -c vulkan
           dub build :shapes -c vulkan
