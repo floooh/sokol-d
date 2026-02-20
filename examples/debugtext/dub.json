@@ -61,7 +61,7 @@
             "name": "wasm",
             "targetType": "staticLibrary",
             "postGenerateCommands": [
-                "$DC -run ${SOKOL_D_PACKAGE_DIR}/build.d -- --target=wasm --backend=gles3 --link=debugtext --verbose"
+                "$DC -run ${SOKOL_D_PACKAGE_DIR}/builder.d -- --target=wasm --backend=gles3 --link=debugtext --verbose"
             ],
             "subConfigurations": {
                 "sokol-d": "sokol-wgles3"
@@ -71,7 +71,7 @@
             "name": "wgpu",
             "targetType": "staticLibrary",
             "postGenerateCommands": [
-                "$DC -run ${SOKOL_D_PACKAGE_DIR}/build.d -- --target=wasm --backend=wgpu --link=debugtext --verbose"
+                "$DC -run ${SOKOL_D_PACKAGE_DIR}/builder.d -- --target=wasm --backend=wgpu --link=debugtext --verbose"
             ],
             "subConfigurations": {
                 "sokol-d": "sokol-wgpu"
