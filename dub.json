@@ -661,7 +661,8 @@
 				"-mcpu=native"
 			],
 			"libs": [
-				"sokol"
+				"sokol",
+				"nuklear"
 			],
 			"libs-linux": [
 				"X11",
