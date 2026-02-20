@@ -332,6 +332,8 @@ enum LogItem {
     Ok,
     Malloc_failed,
     Macos_invalid_nsopengl_profile,
+    Macos_metal_create_swapchain_depth_texture_failed,
+    Macos_metal_create_swapchain_msaa_texture_failed,
     Win32_load_opengl32_dll_failed,
     Win32_create_helper_window_failed,
     Win32_helper_window_getdc_failed,
