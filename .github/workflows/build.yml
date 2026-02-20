@@ -149,19 +149,27 @@ jobs:
       - name: prepare-linux
         run: |
             pacman -Syu --noconfirm
-            pacman -S --noconfirm glu mesa xorg alsa-lib gcc gdc dub      
+            pacman -S --noconfirm glu mesa xorg alsa-lib gcc gdc dub git perl make
+            git clone https://github.com/D-Programming-GDC/gdmd
+            make install -C gdmd
+            ln -sf /usr/bin/gdc /usr/local/bin/gdc
       - name: (dub) Build sokol examples
         working-directory: examples
+        env:
+          DC: gdmd
         run: |
           dub build :blend
           dub build :bufferoffsets
           dub build :clear
           dub build :cube
           dub build :debugtext
+          dub build :droptest
+          dub build :imgui
           dub build :instancing
           dub build :instancingcompute
           dub build :mrt
           dub build :noninterleaved
+          dub build :nuklear
           dub build :offscreen
           dub build :quad
           dub build :shapes
