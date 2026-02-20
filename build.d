@@ -122,6 +122,8 @@ void main(string[] args) @safe
     if (opts.backend == SokolBackend._auto)
         opts.backend = resolveSokolBackend(opts.backend, opts.target);
 
+    opts.target = resolveTarget(opts.target);
+
     if (!opts.linkExample && !opts.runExample)
     {
         if (opts.target.canFind("wasm"))
@@ -328,20 +330,40 @@ struct EmbuilderOptions
 // Platform helpers
 // ---------------------------------------------------------------------------
 
+/// Resolve "native" to the actual compile-time platform string so that all
+/// subsequent target checks work correctly when DUB passes --target=native.
+string resolveTarget(string target) @safe pure nothrow
+{
+    if (target != "native")
+        return target;
+    version (Windows)
+        return "windows";
+    else version (OSX)
+        return "darwin";
+    else version (linux)
+        return "linux";
+    else version (Android)
+        return "android";
+    else version (Emscripten)
+        return "wasm";
+    else
+        return "linux"; // safe fallback
+}
+
 /// Returns true when compiling for (or running on) Windows.
 bool targetIsWindows(string target) @safe pure nothrow
 {
-    return target.canFind("windows");
+    return resolveTarget(target).canFind("windows");
 }
 
 bool targetIsDarwin(string target) @safe pure nothrow
 {
-    return target.canFind("darwin");
+    return resolveTarget(target).canFind("darwin");
 }
 
 bool targetIsWasm(string target) @safe pure nothrow
 {
-    return target.canFind("wasm");
+    return resolveTarget(target).canFind("wasm");
 }
 
 /// Object-file extension: ".obj" on Windows, ".o" elsewhere.
@@ -407,7 +429,7 @@ void buildLibSokol(LibSokolOptions opts) @safe
         ];
 
         if (isMac)
-            cflags ~= ["-ObjC", "-Wno-return-type-c-linkage"];
+            cflags ~= ["-x", "objective-c", "-Wno-return-type-c-linkage"];
 
         if (!isWasm)
         {
@@ -815,23 +837,17 @@ string defaultCompiler(string target) @safe
 
 SokolBackend resolveSokolBackend(SokolBackend backend, string target) @safe
 {
-    if (target.canFind("linux"))
+    immutable t = resolveTarget(target);
+    if (t.canFind("linux"))
         return backend == SokolBackend.vulkan ? SokolBackend.vulkan : SokolBackend.glcore;
-    if (target.canFind("darwin"))
+    if (t.canFind("darwin"))
         return SokolBackend.metal;
-    if (target.canFind("windows"))
+    if (t.canFind("windows"))
         return backend == SokolBackend.vulkan ? SokolBackend.vulkan : SokolBackend.d3d11;
-    if (target.canFind("wasm"))
+    if (t.canFind("wasm"))
         return backend == SokolBackend.wgpu ? backend : SokolBackend.gles3;
-    if (target.canFind("android"))
+    if (t.canFind("android"))
         return SokolBackend.gles3;
-    // Fall back to compile-time platform
-    version (linux)
-        return backend == SokolBackend.vulkan ? SokolBackend.vulkan : SokolBackend.glcore;
-    version (Windows)
-        return backend == SokolBackend.vulkan ? SokolBackend.vulkan : SokolBackend.d3d11;
-    version (OSX)
-        return SokolBackend.metal;
     return backend;
 }
 
