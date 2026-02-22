@@ -1,0 +1,105 @@
+name: Update sokol-d Dependencies
+
+on:
+  schedule:
+    - cron: '0 8 * * 1' # Every Monday at 08:00 UTC
+  workflow_dispatch:
+
+jobs:
+  update-deps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@main
+
+      - name: Fetch latest dependency versions
+        id: versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Returns the latest release tag, stripping an optional leading 'v'.
+          # Falls back to the latest git tag if the repo has no GitHub Release.
+          # NOTE: do NOT pipe gh api directly — piping resets $? to sed's exit
+          #       code (always 0), hiding the 404 and preventing the fallback.
+          get_version() {
+            local repo="$1"
+            local ver
+            ver=$(gh api "repos/$repo/releases/latest" --jq '.tag_name' 2>/dev/null)
+            if [ $? -ne 0 ] || [ -z "$ver" ] || [ "$ver" = "null" ]; then
+              ver=$(gh api "repos/$repo/tags?per_page=1" --jq '.[0].name' 2>/dev/null)
+            fi
+            printf '%s' "$ver" | sed 's/^v//'
+          }
+
+          EMSDK_LATEST=$(get_version "emscripten-core/emsdk")
+          IMGUI_LATEST=$(get_version "floooh/dcimgui")
+          NUKLEAR_LATEST=$(get_version "Immediate-Mode-UI/Nuklear")
+
+          EMSDK_CURRENT=$(grep -oP 'enum emsdk_version\s*=\s*"\K[^"]+' build.d)
+          IMGUI_CURRENT=$(grep -oP 'enum imgui_version\s*=\s*"\K[^"]+' build.d)
+          NUKLEAR_CURRENT=$(grep -oP 'enum nuklear_version\s*=\s*"\K[^"]+' build.d)
+
+          echo "emsdk_latest=$EMSDK_LATEST"       >> "$GITHUB_OUTPUT"
+          echo "imgui_latest=$IMGUI_LATEST"       >> "$GITHUB_OUTPUT"
+          echo "nuklear_latest=$NUKLEAR_LATEST"   >> "$GITHUB_OUTPUT"
+          echo "emsdk_current=$EMSDK_CURRENT"     >> "$GITHUB_OUTPUT"
+          echo "imgui_current=$IMGUI_CURRENT"     >> "$GITHUB_OUTPUT"
+          echo "nuklear_current=$NUKLEAR_CURRENT" >> "$GITHUB_OUTPUT"
+
+          NEEDS_UPDATE=false
+          [ "$EMSDK_LATEST"   != "$EMSDK_CURRENT"   ] && NEEDS_UPDATE=true
+          [ "$IMGUI_LATEST"   != "$IMGUI_CURRENT"   ] && NEEDS_UPDATE=true
+          [ "$NUKLEAR_LATEST" != "$NUKLEAR_CURRENT" ] && NEEDS_UPDATE=true
+          echo "needs_update=$NEEDS_UPDATE" >> "$GITHUB_OUTPUT"
+
+      - name: Apply version bumps to build.d
+        if: steps.versions.outputs.needs_update == 'true'
+        env:
+          EMSDK_LATEST: ${{ steps.versions.outputs.emsdk_latest }}
+          IMGUI_LATEST: ${{ steps.versions.outputs.imgui_latest }}
+          NUKLEAR_LATEST: ${{ steps.versions.outputs.nuklear_latest }}
+        run: |
+          python3 << 'PYEOF'
+          import os, re
+
+          path = 'build.d'
+          content = open(path).read()
+
+          for var, val in [
+              ('emsdk_version',   os.environ['EMSDK_LATEST']),
+              ('imgui_version',   os.environ['IMGUI_LATEST']),
+              ('nuklear_version', os.environ['NUKLEAR_LATEST']),
+          ]:
+              content = re.sub(
+                  rf'^(enum {var}\s*=\s*)"[^"]*"',
+                  rf'\1"{val}"',
+                  content,
+                  flags=re.MULTILINE,
+              )
+
+          open(path, 'w').write(content)
+          PYEOF
+
+      - name: Open pull request
+        if: steps.versions.outputs.needs_update == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: deps/update-build-d-versions
+          delete-branch: true
+          commit-message: "chore(deps): update build.d dependency versions"
+          title: "chore(deps): update build.d dependency versions"
+          body: |
+            Automated dependency version bump for `build.d`.
+
+            | Dependency | Current | Latest |
+            |:-----------|:-------:|:------:|
+            | [emsdk](https://github.com/emscripten-core/emsdk) | `${{ steps.versions.outputs.emsdk_current }}` | `${{ steps.versions.outputs.emsdk_latest }}` |
+            | [dcimgui](https://github.com/floooh/dcimgui) | `${{ steps.versions.outputs.imgui_current }}` | `${{ steps.versions.outputs.imgui_latest }}` |
+            | [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear) | `${{ steps.versions.outputs.nuklear_current }}` | `${{ steps.versions.outputs.nuklear_latest }}` |
+
+            > Generated automatically by [update-deps.yml](.github/workflows/update-deps.yml).
+          labels: dependencies
