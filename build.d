@@ -476,7 +476,6 @@ void buildLibSokol(LibSokolOptions opts) @safe
             "-framework", "Cocoa",
             "-framework", "QuartzCore",
             "-framework", "Foundation",
-            "-framework", "MetalKit",
             "-framework", "Metal",
             "-framework", "AudioToolbox",
         ];
