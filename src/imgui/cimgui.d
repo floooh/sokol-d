@@ -1,4 +1,4 @@
-// Generated on 2025-12-19
+// Generated on 2026-02-22
 /++
 + D wrapper for cimgui (Dear ImGui).
 + Provides bindings for Dear ImGui immediate mode GUI library.
@@ -1832,7 +1832,6 @@ void EndPopup() @trusted
 +  CloseCurrentPopup() is called by default by Selectable()/MenuItem() when activated (FIXME: need some options).
 +  Use ImGuiPopupFlags_NoOpenOverExistingPopup to avoid opening a popup if there's already one at the same level. This is equivalent to e.g. testing for !IsAnyPopupOpen() prior to OpenPopup().
 +  Use IsWindowAppearing() after BeginPopup() to tell if a window just opened.
-+  IMPORTANT: Notice that for OpenPopupOnItemClick() we exceptionally default flags to 1 (== ImGuiPopupFlags_MouseButtonRight) for backward compatibility with older API taking 'int mouse_button = 1' parameter
 +/
 void OpenPopup(const(char)* str_id, ImGuiPopupFlags popup_flags) @trusted
 {
@@ -1855,11 +1854,15 @@ void CloseCurrentPopup() @trusted
 }
 
 /++
-+ Popups: open+begin combined functions helpers
++ Popups: Open+Begin popup combined functions helpers to create context menus.
 +  Helpers to do OpenPopup+BeginPopup where the Open action is triggered by e.g. hovering an item and rightclicking.
-+  They are convenient to easily create context menus, hence the name.
 +  IMPORTANT: Notice that BeginPopupContextXXX takes ImGuiPopupFlags just like OpenPopup() and unlike BeginPopup(). For full consistency, we may add ImGuiWindowFlags to the BeginPopupContextXXX functions in the future.
-+  IMPORTANT: Notice that we exceptionally default their flags to 1 (== ImGuiPopupFlags_MouseButtonRight) for backward compatibility with older API taking 'int mouse_button = 1' parameter, so if you add other flags remember to readd the ImGuiPopupFlags_MouseButtonRight.
++  IMPORTANT: If you ever used the left mouse button with BeginPopupContextXXX() helpers before 1.92.6:
++  Before this version, OpenPopupOnItemClick(), BeginPopupContextItem(), BeginPopupContextWindow(), BeginPopupContextVoid() had 'a ImGuiPopupFlags popup_flags = 1' default value in their function signature.
++  Before: Explicitly passing a literal 0 meant ImGuiPopupFlags_MouseButtonLeft. The default = 1 meant ImGuiPopupFlags_MouseButtonRight.
++  After: The default = 0 means ImGuiPopupFlags_MouseButtonRight. Explicitly passing a literal 1 also means ImGuiPopupFlags_MouseButtonRight (if legacy behavior are enabled) or will assert (if legacy behavior are disabled).
++  TL;DR: if you don't want to use right mouse button for popups, always specify it explicitly using a named ImGuiPopupFlags_MouseButtonXXXX value.
++  Read "API BREAKING CHANGES" 2026/01/07 (1.92.6) entry in imgui.cpp or GitHub topic #9157 for all details.
 +/
 bool BeginPopupContextItem() @trusted
 {
@@ -2378,6 +2381,11 @@ ImVec2 GetItemRectSize() @trusted
     return igGetItemRectSize();
 }
 
+ImGuiItemFlags GetItemFlags() @trusted
+{
+    return igGetItemFlags();
+}
+
 /++
 + Viewports
 +  Currently represents the Platform Window created by the application which is hosting our Dear ImGui windows.
@@ -2479,12 +2487,12 @@ void ColorConvertHSVtoRGB(float h, float s, float v, scope float* out_r, scope f
 }
 
 /++
-+ Inputs Utilities: Keyboard/Mouse/Gamepad
++ Inputs Utilities: Raw Keyboard/Mouse/Gamepad Access
++  Consider using the Shortcut() function instead of IsKeyPressed()/IsKeyChordPressed()! Shortcut() is easier to use and better featured (can do focus routing check).
 +  the ImGuiKey enum contains all possible keyboard, mouse and gamepad inputs (e.g. ImGuiKey_A, ImGuiKey_MouseLeft, ImGuiKey_GamepadDpadUp...).
-+  (legacy: before v1.87, we used ImGuiKey to carry native/user indices as defined by each backends. This was obsoleted in 1.87 (202202) and completely removed in 1.91.5 (202411). See https://github.com/ocornut/imgui/issues/4921)
-+  (legacy: any use of ImGuiKey will assert when key
++  (legacy: before v1.87 (202202), we used ImGuiKey
 + <
-+ 512 to detect passing legacy native/user indices)
++ 512 values to carry native/user indices as defined by each backends. This was obsoleted in 1.87 (202202) and completely removed in 1.91.5 (202411). See https://github.com/ocornut/imgui/issues/4921)
 +/
 bool IsKeyDown(ImGuiKey key) @trusted
 {
@@ -2529,7 +2537,10 @@ void SetNextFrameWantCaptureKeyboard(bool want_capture_keyboard) @trusted
 /++
 + Inputs Utilities: Shortcut Testing
 + &
-+ Routing [BETA]
++ Routing
++  Typical use is e.g.: 'if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S)) { ... }'.
++  Flags: Default route use ImGuiInputFlags_RouteFocused, but see ImGuiInputFlags_RouteGlobal and other options in ImGuiInputFlags_!
++  Flags: Use ImGuiInputFlags_Repeat to support repeat.
 +  ImGuiKeyChord = a ImGuiKey + optional ImGuiMod_Alt/ImGuiMod_Ctrl/ImGuiMod_Shift/ImGuiMod_Super.
 + ImGuiKey_C                          // Accepted by functions taking ImGuiKey or ImGuiKeyChord arguments
 + ImGuiMod_Ctrl | ImGuiKey_C          // Accepted by functions taking ImGuiKeyChord arguments
@@ -2541,8 +2552,10 @@ void SetNextFrameWantCaptureKeyboard(bool want_capture_keyboard) @trusted
 + The whole system is order independent, so if Child1 makes its calls before Parent, results will be identical.
 + This is an important property as it facilitate working with foreign code or larger codebase.
 +  To understand the difference:
-+  IsKeyChordPressed() compares mods and call IsKeyPressed() > function has no sideeffect.
-+  Shortcut() submits a route, routes are resolved, if it currently can be routed it calls IsKeyChordPressed() > function has (desirable) sideeffects as it can prevents another call from getting the route.
++  IsKeyChordPressed() compares mods and call IsKeyPressed()
++ > the function has no sideeffect.
++  Shortcut() submits a route, routes are resolved, if it currently can be routed it calls IsKeyChordPressed()
++ > the function has (desirable) sideeffects as it can prevents another call from getting the route.
 +  Visualize registered routes in 'Metrics/Debugger>Inputs'.
 +/
 bool Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags) @trusted
@@ -2716,7 +2729,9 @@ const(char)* SaveIniSettingsToMemory(size_t* out_ini_size) @trusted
 
 /++
 + Debug Utilities
-+  Your main debugging friend is the ShowMetricsWindow() function, which is also accessible from Demo>Tools>Metrics Debugger
++  Your main debugging friend is the ShowMetricsWindow() function.
++  Interactive tools are all accessible from the 'Dear ImGui Demo>Tools' menu.
++  Read https://github.com/ocornut/imgui/wiki/DebugTools for a description of all available debug tools.
 +/
 void DebugTextEncoding(const(char)* text) @trusted
 {
@@ -2815,6 +2830,9 @@ void PopTabStop() @trusted
     igPopTabStop();
 }
 
+/++
++ You do not need those functions! See #7838 on GitHub for more info.
++/
 ImVec2 GetContentRegionMax() @trusted
 {
     return igGetContentRegionMax();
@@ -2833,34 +2851,6 @@ ImVec2 GetWindowContentRegionMax() @trusted
 /++
 + OBSOLETED in 1.90.0 (from September 2023)
 +/
-bool BeginChildFrame(ImGuiID id, ImVec2 size) @trusted
-{
-    return igBeginChildFrame(id, size);
-}
-
-bool BeginChildFrameEx(ImGuiID id, ImVec2 size, ImGuiWindowFlags window_flags) @trusted
-{
-    return igBeginChildFrameEx(id, size, window_flags);
-}
-
-void EndChildFrame() @trusted
-{
-    igEndChildFrame();
-}
-
-/++
-+ inline bool       BeginChild(const char* str_id, const ImVec2
-+ &
-+ size_arg, bool borders, ImGuiWindowFlags window_flags){ return BeginChild(str_id, size_arg, borders ? ImGuiChildFlags_Borders : ImGuiChildFlags_None, window_flags); } // Unnecessary as true == ImGuiChildFlags_Borders
-+ inline bool       BeginChild(ImGuiID id, const ImVec2
-+ &
-+ size_arg, bool borders, ImGuiWindowFlags window_flags)        { return BeginChild(id, size_arg, borders ? ImGuiChildFlags_Borders : ImGuiChildFlags_None, window_flags);     } // Unnecessary as true == ImGuiChildFlags_Borders
-+/
-void ShowStackToolWindow(scope bool* p_open) @trusted
-{
-    igShowStackToolWindow(p_open);
-}
-
 bool ComboObsolete(const(char)* label, scope int* current_item, ImGuiOld_callbackCallback old_callback, scope void* user_data, int items_count) @trusted
 {
     return igComboObsolete(label, current_item, old_callback, user_data, items_count);
@@ -2896,6 +2886,11 @@ ImGuiIO* GetIOImGuiContextPtr(scope ImGuiContext* ctx) @trusted
 ImGuiPlatformIO* GetPlatformIOImGuiContextPtr(scope ImGuiContext* ctx) @trusted
 {
     return igGetPlatformIOImGuiContextPtr(ctx);
+}
+
+float GetScale() @trusted
+{
+    return igGetScale();
 }
 
 ImGuiWindow* GetCurrentWindowRead() @trusted
@@ -3156,6 +3151,31 @@ void Shutdown() @trusted
 }
 
 /++
++ Context name
++ &
++ generic context hooks
++/
+void SetContextName(scope ImGuiContext* ctx, const(char)* name) @trusted
+{
+    igSetContextName(ctx, name);
+}
+
+ImGuiID AddContextHook(ImGuiContext* ctx, ImGuiContextHook* hook) @trusted
+{
+    return igAddContextHook(ctx, hook);
+}
+
+void RemoveContextHook(scope ImGuiContext* ctx, ImGuiID hook_to_remove) @trusted
+{
+    igRemoveContextHook(ctx, hook_to_remove);
+}
+
+void CallContextHooks(scope ImGuiContext* ctx, ImGuiContextHookType type) @trusted
+{
+    igCallContextHooks(ctx, type);
+}
+
+/++
 + NewFrame
 +/
 void UpdateInputEvents(bool trickle_fast_inputs) @trusted
@@ -3194,26 +3214,13 @@ void UpdateMouseMovingWindowEndFrame() @trusted
 }
 
 /++
-+ Generic context hooks
-+/
-ImGuiID AddContextHook(ImGuiContext* context, ImGuiContextHook* hook) @trusted
-{
-    return igAddContextHook(context, hook);
-}
-
-void RemoveContextHook(scope ImGuiContext* context, ImGuiID hook_to_remove) @trusted
-{
-    igRemoveContextHook(context, hook_to_remove);
-}
-
-void CallContextHooks(scope ImGuiContext* context, ImGuiContextHookType type) @trusted
-{
-    igCallContextHooks(context, type);
-}
-
-/++
 + Viewports
 +/
+ImGuiViewport* GetWindowViewport() @trusted
+{
+    return igGetWindowViewport();
+}
+
 void ScaleWindowsInViewport(scope ImGuiViewportP* viewport, float scale) @trusted
 {
     igScaleWindowsInViewport(viewport, scale);
@@ -3348,11 +3355,6 @@ void ScrollToBringRectIntoView(scope ImGuiWindow* window, ImRect rect) @trusted
 ImGuiItemStatusFlags GetItemStatusFlags() @trusted
 {
     return igGetItemStatusFlags();
-}
-
-ImGuiItemFlags GetItemFlags() @trusted
-{
-    return igGetItemFlags();
 }
 
 ImGuiID GetActiveID() @trusted
@@ -3623,6 +3625,11 @@ ImVec2 FindBestWindowPosForPopup(scope ImGuiWindow* window) @trusted
 ImVec2 FindBestWindowPosForPopupEx(ImVec2 ref_pos, ImVec2 size, scope ImGuiDir* last_dir, ImRect r_outer, ImRect r_avoid, ImGuiPopupPositionPolicy policy) @trusted
 {
     return igFindBestWindowPosForPopupEx(ref_pos, size, last_dir, r_outer, r_avoid, policy);
+}
+
+ImGuiMouseButton GetMouseButtonFromPopupFlags(ImGuiPopupFlags flags) @trusted
+{
+    return igGetMouseButtonFromPopupFlags(flags);
 }
 
 /++
@@ -4393,6 +4400,11 @@ ImGuiID TableGetInstanceID(scope ImGuiTable* table, int instance_no) @trusted
     return igTableGetInstanceID(table, instance_no);
 }
 
+void TableFixDisplayOrder(scope ImGuiTable* table) @trusted
+{
+    igTableFixDisplayOrder(table);
+}
+
 void TableSortSpecsSanitize(scope ImGuiTable* table) @trusted
 {
     igTableSortSpecsSanitize(table);
@@ -4471,6 +4483,11 @@ void TableSetColumnWidthAutoSingle(scope ImGuiTable* table, int column_n) @trust
 void TableSetColumnWidthAutoAll(scope ImGuiTable* table) @trusted
 {
     igTableSetColumnWidthAutoAll(table);
+}
+
+void TableSetColumnDisplayOrder(scope ImGuiTable* table, int column_n, int dst_order) @trusted
+{
+    igTableSetColumnDisplayOrder(table, column_n, dst_order);
 }
 
 void TableRemove(scope ImGuiTable* table) @trusted
@@ -4709,6 +4726,11 @@ void RenderFrameBorderEx(ImVec2 p_min, ImVec2 p_max, float rounding) @trusted
     igRenderFrameBorderEx(p_min, p_max, rounding);
 }
 
+void RenderColorComponentMarker(ImRect bb, ImU32 col, float rounding) @trusted
+{
+    igRenderColorComponentMarker(bb, col, rounding);
+}
+
 void RenderColorRectWithAlphaCheckerboard(scope ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, float grid_step, ImVec2 grid_off) @trusted
 {
     igRenderColorRectWithAlphaCheckerboard(draw_list, p_min, p_max, fill_col, grid_step, grid_off);
@@ -4782,14 +4804,19 @@ void RenderArrowPointingAt(scope ImDrawList* draw_list, ImVec2 pos, ImVec2 half_
     igRenderArrowPointingAt(draw_list, pos, half_sz, direction, col);
 }
 
-void RenderRectFilledRangeH(scope ImDrawList* draw_list, ImRect rect, ImU32 col, float x_start_norm, float x_end_norm, float rounding) @trusted
+void RenderRectFilledInRangeH(scope ImDrawList* draw_list, ImRect rect, ImU32 col, float fill_x0, float fill_x1, float rounding) @trusted
 {
-    igRenderRectFilledRangeH(draw_list, rect, col, x_start_norm, x_end_norm, rounding);
+    igRenderRectFilledInRangeH(draw_list, rect, col, fill_x0, fill_x1, rounding);
 }
 
 void RenderRectFilledWithHole(scope ImDrawList* draw_list, ImRect outer, ImRect inner, ImU32 col, float rounding) @trusted
 {
     igRenderRectFilledWithHole(draw_list, outer, inner, col, rounding);
+}
+
+ImDrawFlags CalcRoundingFlagsForRectInRect(ImRect r_in, ImRect r_outer, float threshold) @trusted
+{
+    return igCalcRoundingFlagsForRectInRect(r_in, r_outer, threshold);
 }
 
 /++
@@ -5085,6 +5112,11 @@ void ColorPickerOptionsPopup(scope const(float)* ref_col, ImGuiColorEditFlags fl
     igColorPickerOptionsPopup(ref_col, flags);
 }
 
+void SetNextItemColorMarker(ImU32 col) @trusted
+{
+    igSetNextItemColorMarker(col);
+}
+
 /++
 + Plot
 +/
@@ -5245,6 +5277,11 @@ void DebugBreakButtonTooltip(bool keyboard_only, const(char)* description_of_loc
 void ShowFontAtlas(scope ImFontAtlas* atlas) @trusted
 {
     igShowFontAtlas(atlas);
+}
+
+ImU64 DebugTextureIDToU64(ImTextureID tex_id) @trusted
+{
+    return igDebugTextureIDToU64(tex_id);
 }
 
 void DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, scope const(void)* data_id, scope const(void)* data_id_end) @trusted
