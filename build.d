@@ -12,9 +12,9 @@ module build;
 import std;
 
 // Dependency versions
-enum emsdk_version = "5.0.2";
+enum emsdk_version = "5.0.3";
 enum imgui_version = "1.92.6";
-enum nuklear_version = "4.12.8";
+enum nuklear_version = "4.13.2";
 
 void main(string[] args) @safe
 {
