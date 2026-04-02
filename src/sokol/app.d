@@ -912,6 +912,13 @@ double frameDuration() @trusted @nogc nothrow pure {
     return sapp_frame_duration();
 }
 /++
++ get 'raw' unfiltered frame duration in seconds
++/
+extern(C) double sapp_frame_duration_unfiltered() @system @nogc nothrow pure;
+double frameDurationUnfiltered() @trusted @nogc nothrow pure {
+    return sapp_frame_duration_unfiltered();
+}
+/++
 + write string into clipboard
 +/
 extern(C) void sapp_set_clipboard_string(const(char)* str) @system @nogc nothrow pure;
