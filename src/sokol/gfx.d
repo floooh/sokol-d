@@ -247,6 +247,7 @@ extern(C) struct Features {
     bool draw_base_vertex = false;
     bool draw_base_instance = false;
     bool dual_source_blending = false;
+    bool vertexformat_int10_n2 = false;
     bool gl_texture_views = false;
 }
 /++
@@ -493,6 +494,7 @@ enum VertexFormat {
     Short4n,
     Ushort4,
     Ushort4n,
+    Int10_n2,
     Uint10_n2,
     Half2,
     Half4,
@@ -2511,6 +2513,7 @@ enum LogItem {
     Validate_pipelinedesc_no_compute_shader_expected,
     Validate_pipelinedesc_no_cont_attrs,
     Validate_pipelinedesc_attr_basetype_mismatch,
+    Validate_pipelinedesc_attr_vertexformat_int10_n2_not_supported,
     Validate_pipelinedesc_layout_stride4,
     Validate_pipelinedesc_attr_semantics,
     Validate_pipelinedesc_shader_readonly_storagebuffers,
