@@ -73,6 +73,9 @@ extern(C) struct N3dsDesc {
     N3dsNdspinterptype interpolation_type = N3dsNdspinterptype.Dsp_interp_polyphase;
     int channel_id = 0;
 }
+extern(C) struct Win32Desc {
+    bool skip_coinitialize = false;
+}
 extern(C) struct Desc {
     int sample_rate = 0;
     int num_channels = 0;
@@ -82,6 +85,7 @@ extern(C) struct Desc {
     extern(C) void function(float*, int, int) stream_cb = null;
     extern(C) void function(float*, int, int, void*) stream_userdata_cb = null;
     void* user_data = null;
+    Win32Desc win32 = {};
     N3dsDesc n3ds = {};
     Allocator allocator = {};
     Logger logger = {};
