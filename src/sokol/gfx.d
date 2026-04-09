@@ -2428,6 +2428,7 @@ enum LogItem {
     Validate_imagedata_data_size,
     Validate_imagedesc_canary,
     Validate_imagedesc_immutable_dynamic_stream,
+    Validate_imagedesc_attachment_color_depth_stencil,
     Validate_imagedesc_imagetype_2d_numslices,
     Validate_imagedesc_imagetype_cube_numslices,
     Validate_imagedesc_imagetype_array_numslices,
