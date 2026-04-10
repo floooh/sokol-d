@@ -27,7 +27,7 @@ void main(string[] args) @safe
     struct Options
     {
         bool help, verbose, downloadEmsdk, downloadShdc;
-        string compiler, target = defaultTarget(), optimize = "debug", linkExample, runExample, linkage = "static";
+        string compiler, target = defaultTarget(), optimize = "debug", linkExample, runExample, linkage = "static", shellFile;
         SokolBackend backend;
         bool useX11 = true, useWayland, useEgl, useLTO, withSokolImgui, withSokolNuklear;
     }
@@ -90,6 +90,8 @@ void main(string[] args) @safe
             if (!["static", "dynamic"].canFind(linkage))
                 throw new Exception("Invalid linkage: use static or dynamic");
         }
+        else if (arg.startsWith("--shell-file="))
+            shellFile = arg[13 .. $];
         else
             throw new Exception("Unknown argument: " ~ arg);
         break;
@@ -152,6 +154,10 @@ void main(string[] args) @safe
     }
     else if (opts.linkExample)
     {
+        string shellFile = (opts.shellFile.empty) ? 
+            absolutePath(buildPath(sokolRoot, "src", "sokol", "web", "shell.html")) :
+            absolutePath(opts.shellFile);
+
         EmLinkOptions linkOpts = {
             target: "wasm",
             optimize: opts.optimize,
@@ -163,7 +169,7 @@ void main(string[] args) @safe
             use_imgui: opts.withSokolImgui,
             use_nuklear: opts.withSokolNuklear,
             use_filesystem: false,
-            shell_file_path: absolutePath(buildPath(sokolRoot, "src", "sokol", "web", "shell.html")),
+            shell_file_path: shellFile,
             extra_args: [
                 "-L" ~ absolutePath(buildPath(sokolRoot, "build")), "-lsokol"
             ],
