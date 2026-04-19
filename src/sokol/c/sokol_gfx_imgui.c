@@ -1,10 +1,14 @@
 #if defined(IMPL)
-#define SOKOL_GFX_IMGUI_IMPL
+#ifndef CIMGUI_HEADER_PATH
+#define CIMGUI_HEADER_PATH "cimgui.h"
+#endif
+// NOTE: this is only needed for the old cimgui.h bindings
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
-#include "cimgui.h"
+#define SOKOL_GFX_IMGUI_IMPL
+#include CIMGUI_HEADER_PATH
 #endif
 #include "sokol_defines.h"
-#include "sokol_app.h"
 #include "sokol_gfx.h"
+#include "sokol_app.h"
 #include "sokol_imgui.h"
 #include "sokol_gfx_imgui.h"
