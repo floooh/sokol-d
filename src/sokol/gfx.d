@@ -863,7 +863,14 @@ extern(C) struct PassAction {
 + 
 +     The width and height *must* be > 0.
 + 
-+     Additionally the following backend API specific objects must be passed in
++     The boolean `sg_swapchain.invalid` is used to communicate an invalid
++     swapchain state to sokol-gfx (for instance the swapchain code outside of
++     sokol-gfx not being able to create swapchain surfaces). When the .invalid
++     boolean is set to true, all other sg_swapchain struct items must be zeroed
++     (checked in the validation layer), and all rendering in this swapchain-pass
++     will be silently skipped.
++ 
++     For valid swapchains, the following backend API specific objects must be passed in
 +     as 'type erased' void pointers:
 + 
 +     GL:
@@ -938,6 +945,7 @@ extern(C) struct GlSwapchain {
     uint framebuffer = 0;
 }
 extern(C) struct Swapchain {
+    bool invalid = false;
     int width = 0;
     int height = 0;
     int sample_count = 0;
@@ -2577,6 +2585,22 @@ enum LogItem {
     Validate_beginpass_swapchain_wgpu_expect_depthstencilview,
     Validate_beginpass_swapchain_wgpu_expect_depthstencilview_notset,
     Validate_beginpass_swapchain_gl_expect_framebuffer_notset,
+    Validate_beginpass_swapchain_vulkan_expect_renderimage,
+    Validate_beginpass_swapchain_vulkan_expect_renderimage_notset,
+    Validate_beginpass_swapchain_vulkan_expect_renderview,
+    Validate_beginpass_swapchain_vulkan_expect_renderview_notset,
+    Validate_beginpass_swapchain_vulkan_expect_depthstencilimage,
+    Validate_beginpass_swapchain_vulkan_expect_depthstencilimage_notset,
+    Validate_beginpass_swapchain_vulkan_expect_depthstencilview,
+    Validate_beginpass_swapchain_vulkan_expect_depthstencilview_notset,
+    Validate_beginpass_swapchain_vulkan_expect_resolveimage,
+    Validate_beginpass_swapchain_vulkan_expect_resolveimage_notset,
+    Validate_beginpass_swapchain_vulkan_expect_resolveview,
+    Validate_beginpass_swapchain_vulkan_expect_resolveview_notset,
+    Validate_beginpass_swapchain_vulkan_expect_renderfinishedsemaphore,
+    Validate_beginpass_swapchain_vulkan_expect_renderfinishedsemaphore_notset,
+    Validate_beginpass_swapchain_vulkan_expect_presentcompletesemaphore,
+    Validate_beginpass_swapchain_vulkan_expect_presentcompletesemaphore_notset,
     Validate_beginpass_colorattachmentviews_continuous,
     Validate_beginpass_colorattachmentview_alive,
     Validate_beginpass_colorattachmentview_valid,
