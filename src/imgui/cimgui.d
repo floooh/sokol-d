@@ -1,4 +1,4 @@
-// Generated on 2026-02-22
+// Generated on 2026-04-19
 /++
 + D wrapper for cimgui (Dear ImGui).
 + Provides bindings for Dear ImGui immediate mode GUI library.
@@ -17,7 +17,6 @@ pure @nogc nothrow:
 // Callback function types
 extern(C) alias ImGuiGet_item_name_funcCallback = const(char)* function(void*, int);
 extern(C) alias ImGuiGetterCallback = const(char)* function(void*, int);
-extern(C) alias ImGuiOld_callbackCallback = bool function(void*, int, const(char)**);
 extern(C) alias ImGuiValues_getterCallback = float function(void*, int);
 extern(C) alias ImGui__funcCallback = void function(int, void*);
 
@@ -1553,6 +1552,11 @@ void SetNextItemStorageID(ImGuiID storage_id) @trusted
     igSetNextItemStorageID(storage_id);
 }
 
+bool TreeNodeGetOpen(ImGuiID storage_id) @trusted
+{
+    return igTreeNodeGetOpen(storage_id);
+}
+
 /++
 + Widgets: Selectables
 +  A selectable highlights when hovered, and can display another color when selected.
@@ -1973,7 +1977,7 @@ bool TableSetColumnIndex(int column_n) @trusted
 + The context menu can also be made available in columns body using ImGuiTableFlags_ContextMenuInBody.
 +  You may manually submit headers using TableNextRow() + TableHeader() calls, but this is only useful in
 + some advanced use cases (e.g. adding custom widgets in header row).
-+  Use TableSetupScrollFreeze() to lock columns/rows so they stay visible when scrolled.
++  Use TableSetupScrollFreeze() to lock columns/rows so they stay visible when scrolled. When freezing columns you would usually also use ImGuiTableColumnFlags_NoHide on them.
 +/
 void TableSetupColumn(const(char)* label, ImGuiTableColumnFlags flags) @trusted
 {
@@ -2849,29 +2853,6 @@ ImVec2 GetWindowContentRegionMax() @trusted
 }
 
 /++
-+ OBSOLETED in 1.90.0 (from September 2023)
-+/
-bool ComboObsolete(const(char)* label, scope int* current_item, ImGuiOld_callbackCallback old_callback, scope void* user_data, int items_count) @trusted
-{
-    return igComboObsolete(label, current_item, old_callback, user_data, items_count);
-}
-
-bool ComboObsoleteEx(const(char)* label, scope int* current_item, ImGuiOld_callbackCallback old_callback, scope void* user_data, int items_count, int popup_max_height_in_items) @trusted
-{
-    return igComboObsoleteEx(label, current_item, old_callback, user_data, items_count, popup_max_height_in_items);
-}
-
-bool ListBoxObsolete(const(char)* label, scope int* current_item, ImGuiOld_callbackCallback old_callback, scope void* user_data, int items_count) @trusted
-{
-    return igListBoxObsolete(label, current_item, old_callback, user_data, items_count);
-}
-
-bool ListBoxObsoleteEx(const(char)* label, scope int* current_item, ImGuiOld_callbackCallback old_callback, scope void* user_data, int items_count, int height_in_items) @trusted
-{
-    return igListBoxObsoleteEx(label, current_item, old_callback, user_data, items_count, height_in_items);
-}
-
-/++
 + Windows
 + We should always have a CurrentWindow in the stack (there is an implicit "Debug" window)
 + If this ever crashes because g.CurrentWindow is NULL, it means that either:
@@ -3630,6 +3611,16 @@ ImVec2 FindBestWindowPosForPopupEx(ImVec2 ref_pos, ImVec2 size, scope ImGuiDir* 
 ImGuiMouseButton GetMouseButtonFromPopupFlags(ImGuiPopupFlags flags) @trusted
 {
     return igGetMouseButtonFromPopupFlags(flags);
+}
+
+bool IsPopupOpenRequestForItem(ImGuiPopupFlags flags, ImGuiID id) @trusted
+{
+    return igIsPopupOpenRequestForItem(flags, id);
+}
+
+bool IsPopupOpenRequestForWindow(ImGuiPopupFlags flags) @trusted
+{
+    return igIsPopupOpenRequestForWindow(flags);
 }
 
 /++
@@ -4490,6 +4481,11 @@ void TableSetColumnDisplayOrder(scope ImGuiTable* table, int column_n, int dst_o
     igTableSetColumnDisplayOrder(table, column_n, dst_order);
 }
 
+void TableQueueSetColumnDisplayOrder(scope ImGuiTable* table, int column_n, int dst_order) @trusted
+{
+    igTableQueueSetColumnDisplayOrder(table, column_n, dst_order);
+}
+
 void TableRemove(scope ImGuiTable* table) @trusted
 {
     igTableRemove(table);
@@ -4932,6 +4928,11 @@ ImGuiID GetWindowResizeBorderID(scope ImGuiWindow* window, ImGuiDir dir) @truste
     return igGetWindowResizeBorderID(window, dir);
 }
 
+void ExtendHitBoxWhenNearViewportEdge(scope ImGuiWindow* window, scope ImRect* bb, float threshold, ImGuiAxis axis) @trusted
+{
+    igExtendHitBoxWhenNearViewportEdge(window, bb, threshold, axis);
+}
+
 /++
 + Widgets lowlevel behaviors
 +/
@@ -4986,11 +4987,6 @@ void TreeNodeDrawLineToTreePop(scope ImGuiTreeNodeStackData* data) @trusted
 void TreePushOverrideID(ImGuiID id) @trusted
 {
     igTreePushOverrideID(id);
-}
-
-bool TreeNodeGetOpen(ImGuiID storage_id) @trusted
-{
-    return igTreeNodeGetOpen(storage_id);
 }
 
 void TreeNodeSetOpen(ImGuiID storage_id, bool open) @trusted
@@ -5064,9 +5060,14 @@ void InputTextDeactivateHook(ImGuiID id) @trusted
     igInputTextDeactivateHook(id);
 }
 
-bool TempInputText(ImRect bb, ImGuiID id, const(char)* label, scope char* buf, int buf_size, ImGuiInputTextFlags flags) @trusted
+bool TempInputText(ImRect bb, ImGuiID id, const(char)* label, scope char* buf, size_t buf_size, ImGuiInputTextFlags flags) @trusted
 {
     return igTempInputText(bb, id, label, buf, buf_size, flags);
+}
+
+bool TempInputTextEx(ImRect bb, ImGuiID id, const(char)* label, scope char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, scope void* user_data) @trusted
+{
+    return igTempInputTextEx(bb, id, label, buf, buf_size, flags, callback, user_data);
 }
 
 bool TempInputScalar(ImRect bb, ImGuiID id, const(char)* label, ImGuiDataType data_type, scope void* p_data, const(char)* format) @trusted
@@ -5202,6 +5203,14 @@ void EndErrorTooltip() @trusted
 }
 
 /++
++ Demo Doc Marker for e.g. imgui_explorer
++/
+void DemoMarker(const(char)* file, int line, const(char)* section) @trusted
+{
+    igDemoMarker(file, line, section);
+}
+
+/++
 + Debug Tools
 +/
 void DebugAllocHook(scope ImGuiDebugAllocInfo* info, int frame_count, scope void* ptr, size_t size) @trusted
@@ -5309,9 +5318,9 @@ void DebugNodeFont(scope ImFont* font) @trusted
     igDebugNodeFont(font);
 }
 
-void DebugNodeFontGlyphesForSrcMask(scope ImFont* font, scope ImFontBaked* baked, int src_mask) @trusted
+void DebugNodeFontGlyphsForSrcMask(scope ImFont* font, scope ImFontBaked* baked, int src_mask) @trusted
 {
-    igDebugNodeFontGlyphesForSrcMask(font, baked, src_mask);
+    igDebugNodeFontGlyphsForSrcMask(font, baked, src_mask);
 }
 
 void DebugNodeFontGlyph(scope ImFont* font, scope ImFontGlyph* glyph) @trusted
