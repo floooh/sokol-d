@@ -12,6 +12,8 @@ import sg = sokol.gfx;
 import sgapp = sokol.glue;
 import sapp = sokol.app;
 import simgui = sokol.imgui;
+import sgimgui = sokol.gfximgui;
+import sappimgui = sokol.appimgui;
 import log = sokol.log;
 import imgui.cimgui;
 
@@ -38,6 +40,7 @@ void init() nothrow
         environment: sgapp.environment,
         logger: {func: &log.slog_func}
     };
+    sappimgui.setup;
     sg.setup(gfx);
     simgui.Desc imgui_desc = {0};
     simgui.setup(imgui_desc);
@@ -52,6 +55,7 @@ void frame() @trusted
         dpi_scale: sapp.dpiScale(),
     };
     simgui.newFrame(imgui_desc);
+    sappimgui.trackFrame;
 
     /*=== UI CODE STARTS HERE ===*/
     const ImVec2 window_pos = {10, 10};
@@ -67,6 +71,13 @@ void frame() @trusted
     ];
     ColorEdit3(label, rgb.ptr, ImGuiColorEditFlags_.ImGuiColorEditFlags_None);
     End();
+    if (BeginMainMenuBar()) {
+        sgimgui.drawMenu("sokol-gfx");
+        sappimgui.drawMenu("sokol-app");
+        EndMainMenuBar();
+    }
+    sgimgui.draw;
+    sappimgui.draw;
     /*=== UI CODE ENDS HERE ===*/
 
     sg.Pass pass = {action: state.pass_action, swapchain: sgapp.swapchain};
@@ -78,12 +89,15 @@ void frame() @trusted
 
 void event(const(sapp.Event)* ev) @trusted nothrow
 {
+    sappimgui.sappimgui_track_event(ev);
     simgui.simgui_handle_event(ev);
 }
 
 void cleanup() @safe nothrow
 {
+    sappimgui.shutdown;
     simgui.shutdown;
+    sgimgui.shutdown;
     sg.shutdown;
 }
 

@@ -558,7 +558,7 @@ void buildLibSokol(LibSokolOptions opts) @safe
 
         // sokol_imgui.c and sokol_gfx_imgui.c are C, compiled with the C compiler
         // On macOS they also need -x objective-c (same reason as the core sokol sources)
-        foreach (sokolImguiSrc; ["sokol_imgui.c", "sokol_gfx_imgui.c"])
+        foreach (sokolImguiSrc; ["sokol_imgui.c", "sokol_gfx_imgui.c", "sokol_app_imgui.c"])
         {
             immutable srcPath = buildPath(opts.sokolSrcPath, sokolImguiSrc);
             enforce(exists(srcPath), sokolImguiSrc ~ " not found");
