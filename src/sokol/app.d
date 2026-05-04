@@ -416,6 +416,8 @@ enum LogItem {
     Android_native_activity_oncreate,
     Android_create_thread_pipe_failed,
     Android_native_activity_create_success,
+    Android_choreographer_enabled,
+    Android_choreographer_unavailable,
     Wgpu_device_lost,
     Wgpu_device_log,
     Wgpu_device_uncaptured_error,
