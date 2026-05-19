@@ -397,12 +397,16 @@ string includeFlag(string path, string target) @safe pure nothrow
 
 void buildLibSokol(LibSokolOptions opts) @safe
 {
-    immutable buildDir = absolutePath("build");
-    mkdirRecurse(buildDir);
-
     immutable isWin = targetIsWindows(opts.target);
     immutable isMac = targetIsDarwin(opts.target);
     immutable isWasm = targetIsWasm(opts.target);
+
+    // Per-target output dirs so wasm and native archives don't overwrite
+    // each other. "build/" is kept as a mirror of the most recent target.
+    immutable buildSubdir = isWasm ? "build-wasm" : "build-native";
+    immutable buildDir = absolutePath(buildSubdir);
+    mkdirRecurse(buildDir);
+    mkdirRecurse(absolutePath("build"));
 
     string compiler = opts.toolchain ? opts.toolchain : defaultCompiler(opts.target);
 
@@ -602,6 +606,26 @@ void buildLibSokol(LibSokolOptions opts) @safe
             opts.vendor, lflags, opts.verbose);
         if (exists(objPath))
             remove(objPath);
+    }
+
+    // Mirror to legacy "build/" for back-compat with consumers that
+    // reference build/libsokol.a unqualified (e.g. dub's targetPath).
+    {
+        import std.file : copy, exists, remove;
+        immutable legacyDir = absolutePath("build");
+        foreach (libBase; ["libsokol.a", "libcimgui.a", "libnuklear.a",
+                           "libsokol.so", "libcimgui.so", "libnuklear.so",
+                           "sokol.lib", "cimgui.lib", "nuklear.lib",
+                           "sokol.dll", "cimgui.dll", "nuklear.dll",
+                           "libsokol.dylib", "libcimgui.dylib", "libnuklear.dylib"])
+        {
+            immutable src = buildPath(buildDir, libBase);
+            immutable dst = buildPath(legacyDir, libBase);
+            if (!exists(src)) continue;
+            if (exists(dst))
+                try { remove(dst); } catch (Exception) {}
+            try { copy(src, dst); } catch (Exception) {}
+        }
     }
 }
 
