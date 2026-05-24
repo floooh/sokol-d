@@ -559,6 +559,7 @@ extern(C) struct GlSwapchain {
     uint framebuffer = 0;
 }
 extern(C) struct Swapchain {
+    bool invalid = false;
     int width = 0;
     int height = 0;
     int sample_count = 0;
