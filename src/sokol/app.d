@@ -1089,3 +1089,10 @@ extern(C) const(void)* sapp_android_get_native_activity() @system @nogc nothrow 
 const(void)* androidGetNativeActivity() @trusted @nogc nothrow pure {
     return sapp_android_get_native_activity();
 }
+/++
++ Android: get native window handle
++/
+extern(C) const(void)* sapp_android_get_native_window() @system @nogc nothrow pure;
+const(void)* androidGetNativeWindow() @trusted @nogc nothrow pure {
+    return sapp_android_get_native_window();
+}
