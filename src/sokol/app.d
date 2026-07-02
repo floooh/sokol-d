@@ -331,6 +331,7 @@ extern(C) struct Allocator {
 enum LogItem {
     Ok,
     Malloc_failed,
+    Swapchain_depthformat_invalid,
     Macos_invalid_nsopengl_profile,
     Metal_create_swapchain_depth_texture_failed,
     Metal_create_swapchain_msaa_texture_failed,
@@ -462,8 +463,8 @@ enum LogItem {
 + 
 +     Defines the pixel format for swapchain surfaces.
 + 
-+     NOTE: when using sokol_gfx.h do not assume that the underlying
-+     values are compatible with sg_pixel_format!
++     NOTE: DO NOT directly cast this enum to sokol_gfx.h's sg_pixel_format,
++     the enum values are totally different!
 +/
 enum PixelFormat {
     Default,
@@ -471,7 +472,8 @@ enum PixelFormat {
     Rgba8,
     Srgb8a8,
     Bgra8,
-    Sbgra8,
+    Sbgr8a8,
+    Rgba16f,
     Depth,
     Depth_stencil,
 }
@@ -519,11 +521,12 @@ extern(C) struct Environment {
 /++
 + sapp_swapchain
 + 
-+     Provides swapchain information for the current frame to the outside
-+     world via a call to sapp_get_swapchain().
++     Provides swapchain information for the next swapchain render pass,
++     result of sapp_acquire_swapchain()
 + 
-+     NOTE: sapp_get_swapchain() must be called exactly once per frame since
-+     on some backends it will also acquire the next swapchain image.
++     NOTE: sapp_acquire_swapchain() must be called exactly once per frame,
++     and ideally right before the swapchain render pass (e.g. not earlier
++     in the frame).
 + 
 +     NOTE: when using sokol_gfx.h, don't assume that the sapp_swapchain struct
 +     has the same memory layout as sg_swapchain! Use the sokol_log.h helper
@@ -572,6 +575,18 @@ extern(C) struct Swapchain {
     GlSwapchain gl = {};
 }
 /++
++ sapp_composite_mode
++ 
++     Preferred composition mode for the framebuffer surface with background.
++     This is a highly optional feature and may only be fully implemented
++     on the web APIs (WebGL2 and WebGPU)
++/
+enum CompositeMode {
+    Default,
+    Opaque,
+    Premultiplied,
+}
+/++
 + sapp_logger
 + 
 +     Used in sapp_desc to provide a logging function. Please be aware that
@@ -601,7 +616,6 @@ extern(C) struct Html5Desc {
     const(char)* canvas_selector = null;
     bool canvas_resize = false;
     bool preserve_drawing_buffer = false;
-    bool premultiplied_alpha = false;
     bool ask_leave_site = false;
     bool update_document_title = false;
     bool bubble_mouse_events = false;
@@ -615,6 +629,9 @@ extern(C) struct Html5Desc {
 extern(C) struct IosDesc {
     bool keyboard_resizes_canvas = false;
 }
+extern(C) struct MetalDesc {
+    bool disable_display_sync = false;
+}
 extern(C) struct Desc {
     extern(C) void function() init_cb = null;
     extern(C) void function() frame_cb = null;
@@ -627,11 +644,15 @@ extern(C) struct Desc {
     extern(C) void function(const Event*, void*) event_userdata_cb = null;
     int width = 0;
     int height = 0;
+    PixelFormat depth_format = PixelFormat.Default;
+    CompositeMode composite_mode = CompositeMode.Default;
     int sample_count = 0;
     int swap_interval = 0;
+    bool srgb = false;
+    bool hdr = false;
+    bool disable_vsync = false;
     bool high_dpi = false;
     bool fullscreen = false;
-    bool alpha = false;
     const(char)* window_title = null;
     bool enable_clipboard = false;
     int clipboard_size = 0;
@@ -642,6 +663,7 @@ extern(C) struct Desc {
     Allocator allocator = {};
     Logger logger = {};
     GlDesc gl = {};
+    MetalDesc metal = {};
     Win32Desc win32 = {};
     Html5Desc html5 = {};
     IosDesc ios = {};
@@ -703,6 +725,20 @@ enum MouseCursor {
     Custom_14,
     Custom_15,
     Num,
+}
+/++
++ get runtime environment information
++/
+extern(C) Environment sapp_get_environment() @system @nogc nothrow pure;
+Environment getEnvironment() @trusted @nogc nothrow pure {
+    return sapp_get_environment();
+}
+/++
++ acquire swapchain info for the next swapchain render pass, call exactly once per frame
++/
+extern(C) Swapchain sapp_acquire_swapchain() @system @nogc nothrow pure;
+Swapchain acquireSwapchain() @trusted @nogc nothrow pure {
+    return sapp_acquire_swapchain();
 }
 /++
 + returns true after sokol-app has been initialized
@@ -969,20 +1005,6 @@ const(char)* getDroppedFilePath(int index) @trusted @nogc nothrow pure {
 extern(C) void sapp_run(const Desc* desc) @system @nogc nothrow pure;
 void run(scope ref Desc desc) @trusted @nogc nothrow pure {
     sapp_run(&desc);
-}
-/++
-+ get runtime environment information
-+/
-extern(C) Environment sapp_get_environment() @system @nogc nothrow pure;
-Environment getEnvironment() @trusted @nogc nothrow pure {
-    return sapp_get_environment();
-}
-/++
-+ get current frame's swapchain information (call once per frame!)
-+/
-extern(C) Swapchain sapp_get_swapchain() @system @nogc nothrow pure;
-Swapchain getSwapchain() @trusted @nogc nothrow pure {
-    return sapp_get_swapchain();
 }
 /++
 + EGL: get EGLDisplay object
