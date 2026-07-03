@@ -501,7 +501,7 @@ void buildLibSokol(LibSokolOptions opts) @safe
                         "emdawnwebgpu_pkg", "webgpu", "include"));
             }
             compiler = buildPath(opts.vendor, "emsdk", "upstream",
-                "emscripten", "emcc") ~ (isWindows() ? ".bat" : "");
+                "emscripten", "emcc") ~ (isWindows() ? ".exe" : "");
         }
     }
 
@@ -689,7 +689,7 @@ void linkLibrary(string libPath, string[] objFiles, string target,
         string ar;
         if (isWasm)
             ar = buildPath(vendor, "emsdk", "upstream", "emscripten", "emar") ~
-                (isWindows() ? ".bat" : "");
+                (isWindows() ? ".exe" : "");
         else if (isWin)
             ar = "lib.exe";
         else
@@ -730,7 +730,7 @@ string cppCompiler(string cc, string target, string vendor) @safe
     if (targetIsWasm(target))
         return buildPath(vendor, "emsdk", "upstream", "emscripten", "em++") ~
             (
-                isWindows() ? ".bat" : "");
+                isWindows() ? ".exe" : "");
     if (cc.canFind("clang"))
         return findProgram(cc.baseName ~ "++");
     if (cc.canFind("gcc"))
@@ -746,7 +746,7 @@ string cppCompiler(string cc, string target, string vendor) @safe
 void emLinkStep(EmLinkOptions opts) @safe
 {
     string emcc = buildPath(opts.vendor, "emsdk", "upstream", "emscripten",
-        opts.use_imgui ? "em++" : "emcc") ~ (isWindows() ? ".bat" : "");
+        opts.use_imgui ? "em++" : "emcc") ~ (isWindows() ? ".exe" : "");
     string[] cmd = [emcc];
 
     if (opts.use_imgui)
@@ -796,7 +796,7 @@ void emRunStep(EmRunOptions opts) @safe
 {
     string emrun = buildPath(opts.vendor, "emsdk", "upstream", "emscripten", "emrun") ~
         (
-            isWindows() ? ".bat" : "");
+            isWindows() ? ".exe" : "");
     executeOrFail([emrun, buildPath("web", opts.name ~ ".html")], "emrun failed", opts.verbose);
 }
 
@@ -822,7 +822,7 @@ void embuilderStep(EmbuilderOptions opts) @safe
 {
     string embuilder = buildPath(opts.vendor, "emsdk", "upstream", "emscripten", "embuilder") ~
         (
-            isWindows() ? ".bat" : "");
+            isWindows() ? ".exe" : "");
     executeOrFail([embuilder, "build", opts.port_name],
         "embuilder failed to build " ~ opts.port_name, true);
 }
