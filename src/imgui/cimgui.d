@@ -1,4 +1,4 @@
-// Generated on 2026-04-19
+// Generated on 2026-07-03
 /++
 + D wrapper for cimgui (Dear ImGui).
 + Provides bindings for Dear ImGui immediate mode GUI library.
@@ -2576,13 +2576,14 @@ void SetNextItemShortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags) @truste
 + Inputs Utilities: Key/Input Ownership [BETA]
 +  One common use case would be to allow your items to disable standard inputs behaviors such
 + as Tab or Alt key handling, Mouse Wheel scrolling, etc.
-+ e.g. Button(...); SetItemKeyOwner(ImGuiKey_MouseWheelY); to make hovering/activating a button disable wheel for scrolling.
++ e.g. `Button(...); if (SetItemKeyOwner(ImGuiKey_MouseWheelY)) { ... }` to make hovering/activating a button disable wheel for scrolling.
 +  Reminder ImGuiKey enum include access to mouse buttons and gamepad, so key ownership can apply to them.
++  The return value of SetItemKeyOwner() says if ownership has been requested for the item, which is a shortcut to calling yet nonpublic TestKeyOwner() function.
 +  Many related features are still in imgui_internal.h. For instance, most IsKeyXXX()/IsMouseXXX() functions have an owneridaware version.
 +/
-void SetItemKeyOwner(ImGuiKey key) @trusted
+bool SetItemKeyOwner(ImGuiKey key) @trusted
 {
-    igSetItemKeyOwner(key);
+    return igSetItemKeyOwner(key);
 }
 
 /++
@@ -3535,6 +3536,11 @@ bool BeginChildEx(const(char)* name, ImGuiID id, ImVec2 size_arg, ImGuiChildFlag
     return igBeginChildEx(name, id, size_arg, child_flags, window_flags);
 }
 
+ImGuiWindow* FindFrontMostVisibleChildWindow(scope ImGuiWindow* window) @trusted
+{
+    return igFindFrontMostVisibleChildWindow(window);
+}
+
 /++
 + Popups, Modals
 +/
@@ -3932,9 +3938,9 @@ void SetKeyOwnersForKeyChord(ImGuiKeyChord key, ImGuiID owner_id, ImGuiInputFlag
     igSetKeyOwnersForKeyChord(key, owner_id, flags);
 }
 
-void SetItemKeyOwnerImGuiInputFlags(ImGuiKey key, ImGuiInputFlags flags) @trusted
+bool SetItemKeyOwnerImGuiInputFlags(ImGuiKey key, ImGuiInputFlags flags) @trusted
 {
-    igSetItemKeyOwnerImGuiInputFlags(key, flags);
+    return igSetItemKeyOwnerImGuiInputFlags(key, flags);
 }
 
 bool TestKeyOwner(ImGuiKey key, ImGuiID owner_id) @trusted
@@ -4068,6 +4074,11 @@ void PopFocusScope() @trusted
     igPopFocusScope();
 }
 
+bool IsInNavFocusRoute(ImGuiID focus_scope_id) @trusted
+{
+    return igIsInNavFocusRoute(focus_scope_id);
+}
+
 ImGuiID GetCurrentFocusScope() @trusted
 {
     return igGetCurrentFocusScope();
@@ -4111,9 +4122,9 @@ void RenderDragDropTargetRectForItem(ImRect bb) @trusted
     igRenderDragDropTargetRectForItem(bb);
 }
 
-void RenderDragDropTargetRectEx(scope ImDrawList* draw_list, ImRect bb) @trusted
+void RenderDragDropTargetRectEx(scope ImDrawList* draw_list, ImRect bb, float rounding) @trusted
 {
-    igRenderDragDropTargetRectEx(draw_list, bb);
+    igRenderDragDropTargetRectEx(draw_list, bb, rounding);
 }
 
 /++
@@ -4359,6 +4370,11 @@ void TableUpdateBorders(scope ImGuiTable* table) @trusted
 void TableUpdateColumnsWeightFromWidth(scope ImGuiTable* table) @trusted
 {
     igTableUpdateColumnsWeightFromWidth(table);
+}
+
+void TableApplyExternalUnclipRect(scope ImGuiTable* table, scope ImRect* rect) @trusted
+{
+    igTableApplyExternalUnclipRect(table, rect);
 }
 
 void TableDrawBorders(scope ImGuiTable* table) @trusted
@@ -5085,6 +5101,11 @@ bool TempInputIsActive(ImGuiID id) @trusted
     return igTempInputIsActive(id);
 }
 
+ImGuiInputTextState* GetInputTextState(ImGuiID id) @trusted
+{
+    return igGetInputTextState(id);
+}
+
 void SetNextItemRefVal(ImGuiDataType data_type, scope void* p_data) @trusted
 {
     igSetNextItemRefVal(data_type, p_data);
@@ -5356,6 +5377,11 @@ void DebugNodeTable(scope ImGuiTable* table) @trusted
 void DebugNodeTableSettings(scope ImGuiTableSettings* settings) @trusted
 {
     igDebugNodeTableSettings(settings);
+}
+
+void DebugNodeInputTextState(scope ImGuiInputTextState* state) @trusted
+{
+    igDebugNodeInputTextState(state);
 }
 
 void DebugNodeTypingSelectState(scope ImGuiTypingSelectState* state) @trusted
