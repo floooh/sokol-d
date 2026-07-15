@@ -632,6 +632,9 @@ extern(C) struct IosDesc {
 extern(C) struct MetalDesc {
     bool disable_display_sync = false;
 }
+extern(C) struct AndroidDesc {
+    extern(C) bool function(const(void)*) native_event_cb = null;
+}
 extern(C) struct Desc {
     extern(C) void function() init_cb = null;
     extern(C) void function() frame_cb = null;
@@ -667,6 +670,7 @@ extern(C) struct Desc {
     Win32Desc win32 = {};
     Html5Desc html5 = {};
     IosDesc ios = {};
+    AndroidDesc android = {};
 }
 /++
 + HTML5 specific: request and response structs for
