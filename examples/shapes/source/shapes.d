@@ -62,7 +62,7 @@ void init()
     logger: {func: &log.func},};
     sdtx.setup(desc);
 
-    sshape.Vertex[6 * 1024] vertices;
+    ubyte[6 * 1024 * sshape.max_vertex_size] vertices;
     ushort[16 * 1024] indices;
 
     state.passAction.colors[0].load_action = sg.LoadAction.Clear;
@@ -72,14 +72,56 @@ void init()
     state.passAction.colors[0].clear_value.a = 1.0;
 
     // dfmt off
+    sshape.State shp = {
+        vertices: {buffer: {ptr: vertices.ptr, size: vertices.sizeof}},
+        indices: {buffer: {ptr: indices.ptr, size: indices.sizeof}},
+    };
+    sshape.buildBox(shp, sshape.Box(
+            width: 1.0, height: 1.0, depth: 1.0,
+            tiles: 10, random_colors: true,
+        )
+    );
+    state.shapes[0].draw = sshape.elementRange(shp);
+    sshape.buildPlane(shp, sshape.Plane(
+            width: 1.0, depth: 1.0,
+            tiles: 10, random_colors: true,
+        )
+    );
+    state.shapes[1].draw = sshape.elementRange(shp);
+    sshape.buildSphere(shp, sshape.Sphere(
+            radius: 0.75, slices: 36,
+            stacks: 20, random_colors: true,
+        )
+    );
+    state.shapes[2].draw = sshape.elementRange(shp);
+    sshape.buildCylinder(shp, sshape.Cylinder(
+            radius: 0.5, height: 1.5, slices: 36,
+            stacks: 10, random_colors: true,
+        )
+    );
+    state.shapes[3].draw = sshape.elementRange(shp);
+    sshape.buildTorus(shp, sshape.Torus(
+            radius: 0.5, ring_radius: 0.3, rings: 36,
+            sides: 18, random_colors: true,
+        )
+    );
+    // dfmt on
+
+    state.shapes[4].draw = sshape.elementRange(shp);
+    assert(shp.valid);
+    // one vertex- and index-buffer for all shapes
+    state.bind.vertex_buffers[0] = sg.makeBuffer(sshape.vertexBufferDesc(shp));
+    state.bind.index_buffer = sg.makeBuffer(sshape.indexBufferDesc(shp));
+
+    // dfmt off
     sg.PipelineDesc pld = {
         layout: {
-            buffers: [sshape.vertexBufferLayoutState()],
+            buffers: [sshape.vertexBufferLayoutState(shp)],
             attrs: [
-                shd.ATTR_SHAPES_POSITION: sshape.positionVertexAttrState,
-                shd.ATTR_SHAPES_NORMAL: sshape.normalVertexAttrState,
-                shd.ATTR_SHAPES_COLOR0: sshape.colorVertexAttrState,
-                shd.ATTR_SHAPES_TEXCOORD: sshape.texcoordVertexAttrState,
+                shd.ATTR_SHAPES_POSITION: sshape.positionVertexAttrState(shp),
+                shd.ATTR_SHAPES_NORMAL: sshape.normalVertexAttrState(shp),
+                shd.ATTR_SHAPES_COLOR0: sshape.colorVertexAttrState(shp),
+                shd.ATTR_SHAPES_TEXCOORD: sshape.texcoordVertexAttrState(shp),
             ],
         },
         shader: sg.makeShader(shd.shapesShaderDesc(sg.queryBackend())),
@@ -92,48 +134,6 @@ void init()
     };
     // dfmt on
     state.pip = sg.makePipeline(pld);
-
-    // dfmt off
-    sshape.Buffer buf = {
-        vertices: {buffer: {ptr: vertices.ptr, size: vertices.sizeof}},
-        indices: {buffer: {ptr: indices.ptr, size: indices.sizeof}},
-    };
-    buf = sshape.buildBox(buf, sshape.Box(
-            width: 1.0, height: 1.0, depth: 1.0,
-            tiles: 10, random_colors: true,
-        )
-    );
-    state.shapes[0].draw = sshape.elementRange(buf);
-    buf = sshape.buildPlane(buf, sshape.Plane(
-            width: 1.0, depth: 1.0,
-            tiles: 10, random_colors: true,
-        )
-    );
-    state.shapes[1].draw = sshape.elementRange(buf);
-    buf = sshape.buildSphere(buf, sshape.Sphere(
-            radius: 0.75, slices: 36,
-            stacks: 20, random_colors: true,
-        )
-    );
-    state.shapes[2].draw = sshape.elementRange(buf);
-    buf = sshape.buildCylinder(buf, sshape.Cylinder(
-            radius: 0.5, height: 1.5, slices: 36,
-            stacks: 10, random_colors: true,
-        )
-    );
-    state.shapes[3].draw = sshape.elementRange(buf);
-    buf = sshape.buildTorus(buf, sshape.Torus(
-            radius: 0.5, ring_radius: 0.3, rings: 36,
-            sides: 18, random_colors: true,
-        )
-    );
-    // dfmt on
-
-    state.shapes[4].draw = sshape.elementRange(buf);
-    assert(buf.valid);
-    // one vertex- and index-buffer for all shapes
-    state.bind.vertex_buffers[0] = sg.makeBuffer(sshape.vertexBufferDesc(buf));
-    state.bind.index_buffer = sg.makeBuffer(sshape.indexBufferDesc(buf));
 }
 
 void frame()
