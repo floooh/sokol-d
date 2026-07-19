@@ -10,7 +10,7 @@ module sokol.shape;
 import sg = sokol.gfx;
 
 /++
-+ sshape_range is a pointer-size-pair struct used to pass memory
++ sshape_range_t is a pointer-size-pair struct used to pass memory
 +     blobs into sokol-shape. When initialized from a value type
 +     (array or struct), use the SSHAPE_RANGE() macro to build
 +     an sshape_range struct.
@@ -19,6 +19,8 @@ extern(C) struct Range {
     const(void)* ptr = null;
     size_t size = 0;
 }
+enum min_vertex_size = 12;
+enum max_vertex_size = 24;
 /++
 + a 4x4 matrix wrapper struct
 +/
@@ -26,16 +28,12 @@ extern(C) struct Mat4 {
     float[4][4] m = [0.0f, 0.0f, 0.0f, 0.0f];
 }
 /++
-+ vertex layout of the generated geometry
++ a struct for configuring optional vertex components
 +/
-extern(C) struct Vertex {
-    float x = 0.0f;
-    float y = 0.0f;
-    float z = 0.0f;
-    uint normal = 0;
-    ushort u = 0;
-    ushort v = 0;
-    uint color = 0;
+extern(C) struct OptionalComponents {
+    bool normals = false;
+    bool texcoords = false;
+    bool colors = false;
 }
 /++
 + a range of draw-elements (sg_draw(int base_element, int num_element, ...))
@@ -58,15 +56,16 @@ extern(C) struct Sizes {
 /++
 + in/out struct to keep track of mesh-build state
 +/
-extern(C) struct BufferItem {
+extern(C) struct BufferState {
     Range buffer = {};
     size_t data_size = 0;
     size_t shape_offset = 0;
 }
-extern(C) struct Buffer {
+extern(C) struct State {
     bool valid = false;
-    BufferItem vertices = {};
-    BufferItem indices = {};
+    OptionalComponents disable = {};
+    BufferState vertices = {};
+    BufferState indices = {};
 }
 /++
 + creation parameters for the different shape types
@@ -122,83 +121,90 @@ extern(C) struct Torus {
 /++
 + shape builder functions
 +/
-extern(C) Buffer sshape_build_plane(const Buffer* buf, const Plane* params) @system @nogc nothrow pure;
-Buffer buildPlane(scope ref Buffer buf, scope ref Plane params) @trusted @nogc nothrow pure {
-    return sshape_build_plane(&buf, &params);
+extern(C) void sshape_build_plane(const State* state, const Plane* params) @system @nogc nothrow pure;
+void buildPlane(scope ref State state, scope ref Plane params) @trusted @nogc nothrow pure {
+    sshape_build_plane(&state, &params);
 }
-extern(C) Buffer sshape_build_box(const Buffer* buf, const Box* params) @system @nogc nothrow pure;
-Buffer buildBox(scope ref Buffer buf, scope ref Box params) @trusted @nogc nothrow pure {
-    return sshape_build_box(&buf, &params);
+extern(C) void sshape_build_box(const State* state, const Box* params) @system @nogc nothrow pure;
+void buildBox(scope ref State state, scope ref Box params) @trusted @nogc nothrow pure {
+    sshape_build_box(&state, &params);
 }
-extern(C) Buffer sshape_build_sphere(const Buffer* buf, const Sphere* params) @system @nogc nothrow pure;
-Buffer buildSphere(scope ref Buffer buf, scope ref Sphere params) @trusted @nogc nothrow pure {
-    return sshape_build_sphere(&buf, &params);
+extern(C) void sshape_build_sphere(const State* state, const Sphere* params) @system @nogc nothrow pure;
+void buildSphere(scope ref State state, scope ref Sphere params) @trusted @nogc nothrow pure {
+    sshape_build_sphere(&state, &params);
 }
-extern(C) Buffer sshape_build_cylinder(const Buffer* buf, const Cylinder* params) @system @nogc nothrow pure;
-Buffer buildCylinder(scope ref Buffer buf, scope ref Cylinder params) @trusted @nogc nothrow pure {
-    return sshape_build_cylinder(&buf, &params);
+extern(C) void sshape_build_cylinder(const State* state, const Cylinder* params) @system @nogc nothrow pure;
+void buildCylinder(scope ref State state, scope ref Cylinder params) @trusted @nogc nothrow pure {
+    sshape_build_cylinder(&state, &params);
 }
-extern(C) Buffer sshape_build_torus(const Buffer* buf, const Torus* params) @system @nogc nothrow pure;
-Buffer buildTorus(scope ref Buffer buf, scope ref Torus params) @trusted @nogc nothrow pure {
-    return sshape_build_torus(&buf, &params);
+extern(C) void sshape_build_torus(const State* state, const Torus* params) @system @nogc nothrow pure;
+void buildTorus(scope ref State state, scope ref Torus params) @trusted @nogc nothrow pure {
+    sshape_build_torus(&state, &params);
+}
+/++
++ compute size of vertex given optional components
++/
+extern(C) size_t sshape_vertex_size(const OptionalComponents* components) @system @nogc nothrow pure;
+size_t vertexSize(scope ref OptionalComponents components) @trusted @nogc nothrow pure {
+    return sshape_vertex_size(&components);
 }
 /++
 + query required vertex- and index-buffer sizes in bytes
 +/
-extern(C) Sizes sshape_plane_sizes(uint tiles) @system @nogc nothrow pure;
-Sizes planeSizes(uint tiles) @trusted @nogc nothrow pure {
-    return sshape_plane_sizes(tiles);
+extern(C) Sizes sshape_plane_sizes(uint tiles, size_t vertex_size) @system @nogc nothrow pure;
+Sizes planeSizes(uint tiles, size_t vertex_size) @trusted @nogc nothrow pure {
+    return sshape_plane_sizes(tiles, vertex_size);
 }
-extern(C) Sizes sshape_box_sizes(uint tiles) @system @nogc nothrow pure;
-Sizes boxSizes(uint tiles) @trusted @nogc nothrow pure {
-    return sshape_box_sizes(tiles);
+extern(C) Sizes sshape_box_sizes(uint tiles, size_t vetrex_size) @system @nogc nothrow pure;
+Sizes boxSizes(uint tiles, size_t vetrex_size) @trusted @nogc nothrow pure {
+    return sshape_box_sizes(tiles, vetrex_size);
 }
-extern(C) Sizes sshape_sphere_sizes(uint slices, uint stacks) @system @nogc nothrow pure;
-Sizes sphereSizes(uint slices, uint stacks) @trusted @nogc nothrow pure {
-    return sshape_sphere_sizes(slices, stacks);
+extern(C) Sizes sshape_sphere_sizes(uint slices, uint stacks, size_t vertex_size) @system @nogc nothrow pure;
+Sizes sphereSizes(uint slices, uint stacks, size_t vertex_size) @trusted @nogc nothrow pure {
+    return sshape_sphere_sizes(slices, stacks, vertex_size);
 }
-extern(C) Sizes sshape_cylinder_sizes(uint slices, uint stacks) @system @nogc nothrow pure;
-Sizes cylinderSizes(uint slices, uint stacks) @trusted @nogc nothrow pure {
-    return sshape_cylinder_sizes(slices, stacks);
+extern(C) Sizes sshape_cylinder_sizes(uint slices, uint stacks, size_t vertex_size) @system @nogc nothrow pure;
+Sizes cylinderSizes(uint slices, uint stacks, size_t vertex_size) @trusted @nogc nothrow pure {
+    return sshape_cylinder_sizes(slices, stacks, vertex_size);
 }
-extern(C) Sizes sshape_torus_sizes(uint sides, uint rings) @system @nogc nothrow pure;
-Sizes torusSizes(uint sides, uint rings) @trusted @nogc nothrow pure {
-    return sshape_torus_sizes(sides, rings);
+extern(C) Sizes sshape_torus_sizes(uint sides, uint rings, size_t vertex_size) @system @nogc nothrow pure;
+Sizes torusSizes(uint sides, uint rings, size_t vertex_size) @trusted @nogc nothrow pure {
+    return sshape_torus_sizes(sides, rings, vertex_size);
 }
 /++
 + extract sokol-gfx desc structs and primitive ranges from build state
 +/
-extern(C) ElementRange sshape_element_range(const Buffer* buf) @system @nogc nothrow pure;
-ElementRange elementRange(scope ref Buffer buf) @trusted @nogc nothrow pure {
-    return sshape_element_range(&buf);
+extern(C) ElementRange sshape_element_range(const State* state) @system @nogc nothrow pure;
+ElementRange elementRange(scope ref State state) @trusted @nogc nothrow pure {
+    return sshape_element_range(&state);
 }
-extern(C) sg.BufferDesc sshape_vertex_buffer_desc(const Buffer* buf) @system @nogc nothrow pure;
-sg.BufferDesc vertexBufferDesc(scope ref Buffer buf) @trusted @nogc nothrow pure {
-    return sshape_vertex_buffer_desc(&buf);
+extern(C) sg.BufferDesc sshape_vertex_buffer_desc(const State* state) @system @nogc nothrow pure;
+sg.BufferDesc vertexBufferDesc(scope ref State state) @trusted @nogc nothrow pure {
+    return sshape_vertex_buffer_desc(&state);
 }
-extern(C) sg.BufferDesc sshape_index_buffer_desc(const Buffer* buf) @system @nogc nothrow pure;
-sg.BufferDesc indexBufferDesc(scope ref Buffer buf) @trusted @nogc nothrow pure {
-    return sshape_index_buffer_desc(&buf);
+extern(C) sg.BufferDesc sshape_index_buffer_desc(const State* state) @system @nogc nothrow pure;
+sg.BufferDesc indexBufferDesc(scope ref State state) @trusted @nogc nothrow pure {
+    return sshape_index_buffer_desc(&state);
 }
-extern(C) sg.VertexBufferLayoutState sshape_vertex_buffer_layout_state() @system @nogc nothrow pure;
-sg.VertexBufferLayoutState vertexBufferLayoutState() @trusted @nogc nothrow pure {
-    return sshape_vertex_buffer_layout_state();
+extern(C) sg.VertexBufferLayoutState sshape_vertex_buffer_layout_state(const State* state) @system @nogc nothrow pure;
+sg.VertexBufferLayoutState vertexBufferLayoutState(scope ref State state) @trusted @nogc nothrow pure {
+    return sshape_vertex_buffer_layout_state(&state);
 }
-extern(C) sg.VertexAttrState sshape_position_vertex_attr_state() @system @nogc nothrow pure;
-sg.VertexAttrState positionVertexAttrState() @trusted @nogc nothrow pure {
-    return sshape_position_vertex_attr_state();
+extern(C) sg.VertexAttrState sshape_position_vertex_attr_state(const State* state) @system @nogc nothrow pure;
+sg.VertexAttrState positionVertexAttrState(scope ref State state) @trusted @nogc nothrow pure {
+    return sshape_position_vertex_attr_state(&state);
 }
-extern(C) sg.VertexAttrState sshape_normal_vertex_attr_state() @system @nogc nothrow pure;
-sg.VertexAttrState normalVertexAttrState() @trusted @nogc nothrow pure {
-    return sshape_normal_vertex_attr_state();
+extern(C) sg.VertexAttrState sshape_normal_vertex_attr_state(const State* state) @system @nogc nothrow pure;
+sg.VertexAttrState normalVertexAttrState(scope ref State state) @trusted @nogc nothrow pure {
+    return sshape_normal_vertex_attr_state(&state);
 }
-extern(C) sg.VertexAttrState sshape_texcoord_vertex_attr_state() @system @nogc nothrow pure;
-sg.VertexAttrState texcoordVertexAttrState() @trusted @nogc nothrow pure {
-    return sshape_texcoord_vertex_attr_state();
+extern(C) sg.VertexAttrState sshape_texcoord_vertex_attr_state(const State* state) @system @nogc nothrow pure;
+sg.VertexAttrState texcoordVertexAttrState(scope ref State state) @trusted @nogc nothrow pure {
+    return sshape_texcoord_vertex_attr_state(&state);
 }
-extern(C) sg.VertexAttrState sshape_color_vertex_attr_state() @system @nogc nothrow pure;
-sg.VertexAttrState colorVertexAttrState() @trusted @nogc nothrow pure {
-    return sshape_color_vertex_attr_state();
+extern(C) sg.VertexAttrState sshape_color_vertex_attr_state(const State* state) @system @nogc nothrow pure;
+sg.VertexAttrState colorVertexAttrState(scope ref State state) @trusted @nogc nothrow pure {
+    return sshape_color_vertex_attr_state(&state);
 }
 /++
 + helper functions to build packed color value from floats or bytes

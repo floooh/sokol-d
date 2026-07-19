@@ -104,34 +104,34 @@ void init()
 
     // a donut shape which is rendered into the offscreen render target, and
     // a sphere shape which is rendered into the default framebuffer
-    sshape.Vertex[4000] vertices;
+    ubyte[4000 * sshape.max_vertex_size] vertices;
     ushort[24_000] indices;
     // dfmt off
-    sshape.Buffer buf = {
+    sshape.State shp = {
         vertices: {buffer: sshape.Range(&vertices, vertices.sizeof) },
         indices: { buffer: sshape.Range(&indices, indices.sizeof) },
     };
-    buf = sshape.buildTorus(buf, sshape.Torus(
+    sshape.buildTorus(shp, sshape.Torus(
         radius: 0.5,
         ring_radius: 0.3,
         sides: 20,
         rings: 36,
     ));
     // dfmt on
-    state.donut = sshape.elementRange(buf);
+    state.donut = sshape.elementRange(shp);
     // dfmt off
-    buf = sshape.buildSphere(buf, sshape.Sphere(
+    sshape.buildSphere(shp, sshape.Sphere(
         radius: 0.5,
         slices: 72,
         stacks: 40,
     ));
     // dfmt on
-    state.sphere = sshape.elementRange(buf);
+    state.sphere = sshape.elementRange(shp);
 
-    const vbuf = sg.makeBuffer(sshape.vertexBufferDesc(buf));
+    const vbuf = sg.makeBuffer(sshape.vertexBufferDesc(shp));
     state.offscreen.bind.vertex_buffers[0] = vbuf;
     state.display.bind.vertex_buffers[0] = vbuf;
-    const ibuf = sg.makeBuffer(sshape.indexBufferDesc(buf));
+    const ibuf = sg.makeBuffer(sshape.indexBufferDesc(shp));
     state.offscreen.bind.index_buffer = ibuf;
     state.display.bind.index_buffer = ibuf;
 
@@ -140,10 +140,10 @@ void init()
     sg.PipelineDesc offscreen_pip_desc = {
         layout: {
             attrs: [
-                shd.ATTR_OFFSCREEN_POSITION: sshape.positionVertexAttrState,
-                shd.ATTR_OFFSCREEN_NORMAL: sshape.normalVertexAttrState,
+                shd.ATTR_OFFSCREEN_POSITION: sshape.positionVertexAttrState(shp),
+                shd.ATTR_OFFSCREEN_NORMAL: sshape.normalVertexAttrState(shp),
             ],
-            buffers: [sshape.vertexBufferLayoutState],
+            buffers: [sshape.vertexBufferLayoutState(shp)],
         },
         colors: [{pixel_format: sg.PixelFormat.Rgba8}],
         shader: sg.makeShader(shd.offscreenShaderDesc(sg.queryBackend)),
@@ -159,11 +159,11 @@ void init()
     sg.PipelineDesc default_pip_desc = {
         layout: {
             attrs: [
-                shd.ATTR_DEFAULT_POSITION: sshape.positionVertexAttrState,
-                shd.ATTR_DEFAULT_NORMAL: sshape.normalVertexAttrState,
-                shd.ATTR_DEFAULT_TEXCOORD0: sshape.texcoordVertexAttrState,
+                shd.ATTR_DEFAULT_POSITION: sshape.positionVertexAttrState(shp),
+                shd.ATTR_DEFAULT_NORMAL: sshape.normalVertexAttrState(shp),
+                shd.ATTR_DEFAULT_TEXCOORD0: sshape.texcoordVertexAttrState(shp),
             ],
-            buffers: [sshape.vertexBufferLayoutState],
+            buffers: [sshape.vertexBufferLayoutState(shp)],
         },
         shader: sg.makeShader(shd.defaultShaderDesc(sg.queryBackend)),
         index_type: sg.IndexType.Uint16,
