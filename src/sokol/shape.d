@@ -155,9 +155,9 @@ extern(C) Sizes sshape_plane_sizes(uint tiles, size_t vertex_size) @system @nogc
 Sizes planeSizes(uint tiles, size_t vertex_size) @trusted @nogc nothrow pure {
     return sshape_plane_sizes(tiles, vertex_size);
 }
-extern(C) Sizes sshape_box_sizes(uint tiles, size_t vetrex_size) @system @nogc nothrow pure;
-Sizes boxSizes(uint tiles, size_t vetrex_size) @trusted @nogc nothrow pure {
-    return sshape_box_sizes(tiles, vetrex_size);
+extern(C) Sizes sshape_box_sizes(uint tiles, size_t vertex_size) @system @nogc nothrow pure;
+Sizes boxSizes(uint tiles, size_t vertex_size) @trusted @nogc nothrow pure {
+    return sshape_box_sizes(tiles, vertex_size);
 }
 extern(C) Sizes sshape_sphere_sizes(uint slices, uint stacks, size_t vertex_size) @system @nogc nothrow pure;
 Sizes sphereSizes(uint slices, uint stacks, size_t vertex_size) @trusted @nogc nothrow pure {
