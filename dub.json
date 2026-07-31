@@ -53,12 +53,14 @@
 	"dflags-dmd": [
 		"-verrors=context",
 		"-preview=safer",
-		"-preview=dip1000"
+		"-preview=dip1000",
+		"-preview=rvaluerefparam"
 	],
 	"dflags-ldc": [
 		"--verrors-context",
 		"--preview=safer",
-		"--preview=dip1000"
+		"--preview=dip1000",
+		"--preview=rvaluerefparam"
 	],
 	"lflags-posix": [
 		"-L$PACKAGE_DIR/build"
