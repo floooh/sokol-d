@@ -1,4 +1,4 @@
-// Generated on 2026-07-03
+// Generated on 2026-07-31
 /++
 + D wrapper for cimgui (Dear ImGui).
 + Provides bindings for Dear ImGui immediate mode GUI library.
@@ -803,6 +803,7 @@ ImGuiID GetIDInt(int int_id) @trusted
 
 /++
 + Widgets: Text
++  Note that all functions taking format strings in the API may be passed ("%s", text) or ("%.*s", text_len, text): which will automatically bypass the formatter.
 +/
 void TextUnformatted(const(char)* text) @trusted
 {
@@ -933,7 +934,7 @@ bool TextLinkOpenURLEx(const(char)* label, const(char)* url) @trusted
 + Widgets: Images
 +  Read about ImTextureID/ImTextureRef  here: https://github.com/ocornut/imgui/wiki/ImageLoadingandDisplayingExamples
 +  'uv0' and 'uv1' are texture coordinates. Read about them from the same link above.
-+  Image() pads adds style.ImageBorderSize on each side, ImageButton() adds style.FramePadding on each side.
++  Image() adds style.ImageBorderSize on each side, ImageButton() adds style.FramePadding on each side.
 +  ImageButton() draws a background based on regular Button() color + optionally an inner background if specified.
 +  An obsolete version of Image(), before 1.91.9 (March 2025), had a 'tint_col' parameter which is now supported by the ImageWithBg() function.
 +/
@@ -1465,11 +1466,6 @@ bool ColorButtonEx(const(char)* desc_id, ImVec4 col, ImGuiColorEditFlags flags, 
     return igColorButtonEx(desc_id, col, flags, size);
 }
 
-void SetColorEditOptions(ImGuiColorEditFlags flags) @trusted
-{
-    igSetColorEditOptions(flags);
-}
-
 /++
 + Widgets: Trees
 +  TreeNode functions return true when the node is open, in which case you need to also call TreePop() when you are finished displaying the tree node contents.
@@ -1705,7 +1701,7 @@ void PlotHistogramCallbackEx(const(char)* label, ImGuiValues_getterCallback valu
 +  Use BeginMenuBar() on a window ImGuiWindowFlags_MenuBar to append to its menu bar.
 +  Use BeginMainMenuBar() to create a menu bar at the top of the screen and append to it.
 +  Use BeginMenu() to create a menu. You can call BeginMenu() multiple time with the same identifier to append more items to it.
-+  Not that MenuItem() keyboardshortcuts are displayed as a convenience but _not processed_ by Dear ImGui at the moment.
++  Note that MenuItem() keyboard shortcuts are displayed as a convenience but _not processed_ by Dear ImGui at the moment.
 +/
 bool BeginMenuBar() @trusted
 {
@@ -1804,7 +1800,7 @@ alias SetItemTooltipV = igSetItemTooltipV;
 /++
 + Popups, Modals
 +  They block normal mouse hovering detection (and therefore most mouse interactions) behind them.
-+  If not modal: they can be closed by clicking anywhere outside them, or by pressing ESCAPE.
++  If not modal: they can be closed by clicking anywhere outside them, or by pressing Escape (call 'Shortcut(ImGuiKey_Escape)' to claim a higherpriority shortcut).
 +  Their visibility state (~bool) is held internally instead of being held by the programmer as we are used to with regular Begin*() calls.
 +  The 3 properties above are related: we need to retain popup visibility state in the library because popups may be closed as any time.
 +  You can bypass the hovering restriction by using ImGuiHoveredFlags_AllowWhenBlockedByPopup when calling IsItemHovered() or IsWindowHovered().
@@ -1830,26 +1826,28 @@ void EndPopup() @trusted
 
 /++
 + Popups: open/close functions
-+  OpenPopup(): set popup state to open. ImGuiPopupFlags are available for opening options.
++  OpenPopup(): set popup state to open (unless one of the specified ImGuiPopupFlags prevent opening).
++  OpenPopupXXX() functions return true when the popup is toggled open, which allows you to capture local state if needed.
++ You may also call IsWindowAppearing() inside the later BeginPopup() scope if you need to prepare/compute data for the popup.
 +  If not modal: they can be closed by clicking anywhere outside them, or by pressing ESCAPE.
 +  CloseCurrentPopup(): use inside the BeginPopup()/EndPopup() scope to close manually.
 +  CloseCurrentPopup() is called by default by Selectable()/MenuItem() when activated (FIXME: need some options).
 +  Use ImGuiPopupFlags_NoOpenOverExistingPopup to avoid opening a popup if there's already one at the same level. This is equivalent to e.g. testing for !IsAnyPopupOpen() prior to OpenPopup().
 +  Use IsWindowAppearing() after BeginPopup() to tell if a window just opened.
 +/
-void OpenPopup(const(char)* str_id, ImGuiPopupFlags popup_flags) @trusted
+bool OpenPopup(const(char)* str_id, ImGuiPopupFlags popup_flags) @trusted
 {
-    igOpenPopup(str_id, popup_flags);
+    return igOpenPopup(str_id, popup_flags);
 }
 
-void OpenPopupID(ImGuiID id, ImGuiPopupFlags popup_flags) @trusted
+bool OpenPopupID(ImGuiID id, ImGuiPopupFlags popup_flags) @trusted
 {
-    igOpenPopupID(id, popup_flags);
+    return igOpenPopupID(id, popup_flags);
 }
 
-void OpenPopupOnItemClick(const(char)* str_id, ImGuiPopupFlags popup_flags) @trusted
+bool OpenPopupOnItemClick(const(char)* str_id, ImGuiPopupFlags popup_flags) @trusted
 {
-    igOpenPopupOnItemClick(str_id, popup_flags);
+    return igOpenPopupOnItemClick(str_id, popup_flags);
 }
 
 void CloseCurrentPopup() @trusted
@@ -1971,7 +1969,8 @@ bool TableSetColumnIndex(int column_n) @trusted
 + Tables: Headers
 + &
 + Columns declaration
-+  Use TableSetupColumn() to specify label, resizing policy, default width/weight, id, various other flags etc.
++  Use TableSetupColumn() to specify label, resizing policy, default width/weight, various other flags etc.
++ (the trailing 'ImGuiID user_data', which used to be referred to as 'ImGuiID user_id', is merely user data that is blindly copied in ImGuiTableColumnSortSpecs).
 +  Use TableHeadersRow() to create a header row and automatically submit a TableHeader() for each column.
 + Headers are required to perform: reordering, sorting, and opening the context menu.
 + The context menu can also be made available in columns body using ImGuiTableFlags_ContextMenuInBody.
@@ -1984,9 +1983,9 @@ void TableSetupColumn(const(char)* label, ImGuiTableColumnFlags flags) @trusted
     igTableSetupColumn(label, flags);
 }
 
-void TableSetupColumnEx(const(char)* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id) @trusted
+void TableSetupColumnEx(const(char)* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_data) @trusted
 {
-    igTableSetupColumnEx(label, flags, init_width_or_weight, user_id);
+    igTableSetupColumnEx(label, flags, init_width_or_weight, user_data);
 }
 
 void TableSetupScrollFreeze(int cols, int rows) @trusted
@@ -2390,6 +2389,16 @@ ImGuiItemFlags GetItemFlags() @trusted
     return igGetItemFlags();
 }
 
+int GetItemClickedCountWithSingleClickDelay() @trusted
+{
+    return igGetItemClickedCountWithSingleClickDelay();
+}
+
+int GetItemClickedCountWithSingleClickDelayEx(ImGuiMouseButton mouse_button, float delay) @trusted
+{
+    return igGetItemClickedCountWithSingleClickDelayEx(mouse_button, delay);
+}
+
 /++
 + Viewports
 +  Currently represents the Platform Window created by the application which is hosting our Dear ImGui windows.
@@ -2617,9 +2626,14 @@ bool IsMouseDoubleClicked(ImGuiMouseButton button) @trusted
     return igIsMouseDoubleClicked(button);
 }
 
-bool IsMouseReleasedWithDelay(ImGuiMouseButton button, float delay) @trusted
+bool IsMouseReleasedWithDelay(ImGuiMouseButton button) @trusted
 {
-    return igIsMouseReleasedWithDelay(button, delay);
+    return igIsMouseReleasedWithDelay(button);
+}
+
+bool IsMouseReleasedWithDelayEx(ImGuiMouseButton button, float delay) @trusted
+{
+    return igIsMouseReleasedWithDelayEx(button, delay);
 }
 
 int GetMouseClickedCount(ImGuiMouseButton button) @trusted
@@ -2792,6 +2806,14 @@ void MemFree(scope void* ptr) @trusted
 }
 
 /++
++ OBSOLETED in 1.92.9 (from July 2026)
++/
+void SetColorEditOptions(ImGuiColorEditFlags flags) @trusted
+{
+    igSetColorEditOptions(flags);
+}
+
+/++
 + OBSOLETED in 1.92.0 (from June 2025)
 +/
 void PushFont(scope ImFont* font) @trusted
@@ -2851,6 +2873,383 @@ ImVec2 GetWindowContentRegionMin() @trusted
 ImVec2 GetWindowContentRegionMax() @trusted
 {
     return igGetWindowContentRegionMax();
+}
+
+/++
++ Tables: Candidates for public API
++/
+void TableOpenContextMenu() @trusted
+{
+    igTableOpenContextMenu();
+}
+
+void TableOpenContextMenuEx(int column_n) @trusted
+{
+    igTableOpenContextMenuEx(column_n);
+}
+
+void TableSetColumnWidth(int column_n, float width) @trusted
+{
+    igTableSetColumnWidth(column_n, width);
+}
+
+void TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs) @trusted
+{
+    igTableSetColumnSortDirection(column_n, sort_direction, append_to_sort_specs);
+}
+
+int TableGetHoveredRow() @trusted
+{
+    return igTableGetHoveredRow();
+}
+
+float TableGetHeaderRowHeight() @trusted
+{
+    return igTableGetHeaderRowHeight();
+}
+
+float TableGetHeaderAngledMaxLabelWidth() @trusted
+{
+    return igTableGetHeaderAngledMaxLabelWidth();
+}
+
+void TablePushBackgroundChannel() @trusted
+{
+    igTablePushBackgroundChannel();
+}
+
+void TablePopBackgroundChannel() @trusted
+{
+    igTablePopBackgroundChannel();
+}
+
+void TablePushColumnChannel(int column_n) @trusted
+{
+    igTablePushColumnChannel(column_n);
+}
+
+void TablePopColumnChannel() @trusted
+{
+    igTablePopColumnChannel();
+}
+
+void TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label_width, ImGuiTableHeaderData* data, int data_count) @trusted
+{
+    igTableAngledHeadersRowEx(row_id, angle, max_label_width, data, data_count);
+}
+
+/++
++ Tables: Internals
++/
+ImGuiTable* GetCurrentTable() @trusted
+{
+    return igGetCurrentTable();
+}
+
+ImGuiTable* TableFindByID(ImGuiID id) @trusted
+{
+    return igTableFindByID(id);
+}
+
+bool BeginTableWithID(const(char)* name, ImGuiID id, int columns_count, ImGuiTableFlags flags) @trusted
+{
+    return igBeginTableWithID(name, id, columns_count, flags);
+}
+
+bool BeginTableWithIDEx(const(char)* name, ImGuiID id, int columns_count, ImGuiTableFlags flags, ImVec2 outer_size, float inner_width) @trusted
+{
+    return igBeginTableWithIDEx(name, id, columns_count, flags, outer_size, inner_width);
+}
+
+void TableBeginInitMemory(scope ImGuiTable* table, int columns_count) @trusted
+{
+    igTableBeginInitMemory(table, columns_count);
+}
+
+void TableApplyQueuedRequests(scope ImGuiTable* table) @trusted
+{
+    igTableApplyQueuedRequests(table);
+}
+
+void TableSetupDrawChannels(scope ImGuiTable* table) @trusted
+{
+    igTableSetupDrawChannels(table);
+}
+
+void TableReconcileColumns(scope ImGuiTable* table) @trusted
+{
+    igTableReconcileColumns(table);
+}
+
+void TableUpdateLayout(scope ImGuiTable* table) @trusted
+{
+    igTableUpdateLayout(table);
+}
+
+void TableUpdateBorders(scope ImGuiTable* table) @trusted
+{
+    igTableUpdateBorders(table);
+}
+
+void TableUpdateColumnsWeightFromWidth(scope ImGuiTable* table) @trusted
+{
+    igTableUpdateColumnsWeightFromWidth(table);
+}
+
+void TableApplyExternalUnclipRect(scope ImGuiTable* table, scope ImRect* rect) @trusted
+{
+    igTableApplyExternalUnclipRect(table, rect);
+}
+
+void TableDrawBorders(scope ImGuiTable* table) @trusted
+{
+    igTableDrawBorders(table);
+}
+
+void TableDrawDefaultContextMenu(scope ImGuiTable* table, ImGuiTableFlags flags_for_section_to_display) @trusted
+{
+    igTableDrawDefaultContextMenu(table, flags_for_section_to_display);
+}
+
+bool TableBeginContextMenuPopup(scope ImGuiTable* table) @trusted
+{
+    return igTableBeginContextMenuPopup(table);
+}
+
+void TableMergeDrawChannels(scope ImGuiTable* table) @trusted
+{
+    igTableMergeDrawChannels(table);
+}
+
+ImGuiTableInstanceData* TableGetInstanceData(scope ImGuiTable* table, int instance_no) @trusted
+{
+    return igTableGetInstanceData(table, instance_no);
+}
+
+ImGuiID TableGetInstanceID(scope ImGuiTable* table, int instance_no) @trusted
+{
+    return igTableGetInstanceID(table, instance_no);
+}
+
+void TableFixDisplayOrder(scope ImGuiTable* table) @trusted
+{
+    igTableFixDisplayOrder(table);
+}
+
+void TableSortSpecsSanitize(scope ImGuiTable* table) @trusted
+{
+    igTableSortSpecsSanitize(table);
+}
+
+void TableSortSpecsBuild(scope ImGuiTable* table) @trusted
+{
+    igTableSortSpecsBuild(table);
+}
+
+void TableInitColumnDefaults(scope ImGuiTable* table, scope ImGuiTableColumn* column, ImGuiTableColumnFlags init_mask) @trusted
+{
+    igTableInitColumnDefaults(table, column, init_mask);
+}
+
+ImGuiSortDirection TableGetColumnNextSortDirection(scope ImGuiTableColumn* column) @trusted
+{
+    return igTableGetColumnNextSortDirection(column);
+}
+
+void TableFixColumnSortDirection(scope ImGuiTable* table, scope ImGuiTableColumn* column) @trusted
+{
+    igTableFixColumnSortDirection(table, column);
+}
+
+float TableGetColumnWidthAuto(scope ImGuiTable* table, scope ImGuiTableColumn* column) @trusted
+{
+    return igTableGetColumnWidthAuto(table, column);
+}
+
+void TableBeginRow(scope ImGuiTable* table) @trusted
+{
+    igTableBeginRow(table);
+}
+
+void TableEndRow(scope ImGuiTable* table) @trusted
+{
+    igTableEndRow(table);
+}
+
+void TableBeginCell(scope ImGuiTable* table, int column_n) @trusted
+{
+    igTableBeginCell(table, column_n);
+}
+
+void TableEndCell(scope ImGuiTable* table) @trusted
+{
+    igTableEndCell(table);
+}
+
+ImRect TableGetCellBgRect(ImGuiTable* table, int column_n) @trusted
+{
+    return igTableGetCellBgRect(table, column_n);
+}
+
+const(char)* TableGetColumnNameImGuiTablePtr(ImGuiTable* table, int column_n) @trusted
+{
+    return igTableGetColumnNameImGuiTablePtr(table, column_n);
+}
+
+ImGuiID TableGetColumnResizeID(scope ImGuiTable* table, int column_n) @trusted
+{
+    return igTableGetColumnResizeID(table, column_n);
+}
+
+ImGuiID TableGetColumnResizeIDEx(scope ImGuiTable* table, int column_n, int instance_no) @trusted
+{
+    return igTableGetColumnResizeIDEx(table, column_n, instance_no);
+}
+
+float TableCalcMaxColumnWidth(ImGuiTable* table, int column_n) @trusted
+{
+    return igTableCalcMaxColumnWidth(table, column_n);
+}
+
+void TableSetColumnWidthAutoSingle(scope ImGuiTable* table, int column_n) @trusted
+{
+    igTableSetColumnWidthAutoSingle(table, column_n);
+}
+
+void TableSetColumnWidthAutoAll(scope ImGuiTable* table) @trusted
+{
+    igTableSetColumnWidthAutoAll(table);
+}
+
+void TableSetColumnDisplayOrder(scope ImGuiTable* table, int column_n, int dst_order) @trusted
+{
+    igTableSetColumnDisplayOrder(table, column_n, dst_order);
+}
+
+void TableQueueSetColumnDisplayOrder(scope ImGuiTable* table, int column_n, int dst_order) @trusted
+{
+    igTableQueueSetColumnDisplayOrder(table, column_n, dst_order);
+}
+
+void TableRemove(scope ImGuiTable* table) @trusted
+{
+    igTableRemove(table);
+}
+
+void TableGcCompactTransientBuffers(scope ImGuiTable* table) @trusted
+{
+    igTableGcCompactTransientBuffers(table);
+}
+
+void TableGcCompactTransientBuffersImGuiTableTempDataPtr(scope ImGuiTableTempData* table) @trusted
+{
+    igTableGcCompactTransientBuffersImGuiTableTempDataPtr(table);
+}
+
+void TableGcCompactSettings() @trusted
+{
+    igTableGcCompactSettings();
+}
+
+/++
++ Tables: Settings
++/
+void TableLoadSettings(scope ImGuiTable* table) @trusted
+{
+    igTableLoadSettings(table);
+}
+
+void TableLoadSettingsForColumns(scope ImGuiTable* table) @trusted
+{
+    igTableLoadSettingsForColumns(table);
+}
+
+void TableLoadSettingsForColumn(scope ImGuiTableColumn* column, scope ImGuiTableColumnSettings* column_settings, ImGuiTableFlags load_flags) @trusted
+{
+    igTableLoadSettingsForColumn(column, column_settings, load_flags);
+}
+
+void TableSaveSettings(scope ImGuiTable* table) @trusted
+{
+    igTableSaveSettings(table);
+}
+
+void TableResetSettings(scope ImGuiTable* table) @trusted
+{
+    igTableResetSettings(table);
+}
+
+ImGuiTableSettings* TableGetBoundSettings(scope ImGuiTable* table) @trusted
+{
+    return igTableGetBoundSettings(table);
+}
+
+void TableSettingsAddSettingsHandler() @trusted
+{
+    igTableSettingsAddSettingsHandler();
+}
+
+ImGuiTableSettings* TableSettingsCreate(ImGuiID id, int columns_count) @trusted
+{
+    return igTableSettingsCreate(id, columns_count);
+}
+
+ImGuiTableSettings* TableSettingsFindByID(ImGuiID id) @trusted
+{
+    return igTableSettingsFindByID(id);
+}
+
+/++
++ Legacy Columns API (this is not exposed because we will encourage transitioning to the Tables API)
++/
+void SetWindowClipRectBeforeSetChannel(scope ImGuiWindow* window, ImRect clip_rect) @trusted
+{
+    igSetWindowClipRectBeforeSetChannel(window, clip_rect);
+}
+
+void BeginColumns(const(char)* str_id, int count, ImGuiOldColumnFlags flags) @trusted
+{
+    igBeginColumns(str_id, count, flags);
+}
+
+void EndColumns() @trusted
+{
+    igEndColumns();
+}
+
+void PushColumnClipRect(int column_index) @trusted
+{
+    igPushColumnClipRect(column_index);
+}
+
+void PushColumnsBackground() @trusted
+{
+    igPushColumnsBackground();
+}
+
+void PopColumnsBackground() @trusted
+{
+    igPopColumnsBackground();
+}
+
+ImGuiID GetColumnsID(const(char)* str_id, int count) @trusted
+{
+    return igGetColumnsID(str_id, count);
+}
+
+ImGuiOldColumns* FindOrCreateColumns(scope ImGuiWindow* window, ImGuiID id) @trusted
+{
+    return igFindOrCreateColumns(window, id);
+}
+
+float GetColumnOffsetFromNorm(ImGuiOldColumns* columns, float offset_norm) @trusted
+{
+    return igGetColumnOffsetFromNorm(columns, offset_norm);
+}
+
+float GetColumnNormFromOffset(ImGuiOldColumns* columns, float offset) @trusted
+{
+    return igGetColumnNormFromOffset(columns, offset);
 }
 
 /++
@@ -3231,6 +3630,11 @@ void ClearIniSettings() @trusted
     igClearIniSettings();
 }
 
+void CleanupIniSettings(scope ImGuiSettingsCleanupArgs* args) @trusted
+{
+    igCleanupIniSettings(args);
+}
+
 void AddSettingsHandler(ImGuiSettingsHandler* handler) @trusted
 {
     igAddSettingsHandler(handler);
@@ -3554,14 +3958,14 @@ bool BeginPopupMenuEx(ImGuiID id, const(char)* label, ImGuiWindowFlags extra_win
     return igBeginPopupMenuEx(id, label, extra_window_flags);
 }
 
-void OpenPopupEx(ImGuiID id) @trusted
+bool OpenPopupEx(ImGuiID id) @trusted
 {
-    igOpenPopupEx(id);
+    return igOpenPopupEx(id);
 }
 
-void OpenPopupExEx(ImGuiID id, ImGuiPopupFlags popup_flags) @trusted
+bool OpenPopupExEx(ImGuiID id, ImGuiPopupFlags popup_flags) @trusted
 {
-    igOpenPopupExEx(id, popup_flags);
+    return igOpenPopupExEx(id, popup_flags);
 }
 
 void ClosePopupToLevel(int remaining, bool restore_focus_to_window_under_popup) @trusted
@@ -4183,6 +4587,11 @@ void MultiSelectItemFooter(ImGuiID id, scope bool* p_selected, scope bool* p_pre
     igMultiSelectItemFooter(id, p_selected, p_pressed);
 }
 
+void MultiSelectItemFooterEx(ImGuiID id, scope bool* p_selected, scope bool* p_pressed, ImGuiMultiSelectFlags extra_flags) @trusted
+{
+    igMultiSelectItemFooterEx(id, p_selected, p_pressed, extra_flags);
+}
+
 void MultiSelectAddSetAll(scope ImGuiMultiSelectTempData* ms, bool selected) @trusted
 {
     igMultiSelectAddSetAll(ms, selected);
@@ -4201,363 +4610,6 @@ ImGuiBoxSelectState* GetBoxSelectState(ImGuiID id) @trusted
 ImGuiMultiSelectState* GetMultiSelectState(ImGuiID id) @trusted
 {
     return igGetMultiSelectState(id);
-}
-
-/++
-+ Internal Columns API (this is not exposed because we will encourage transitioning to the Tables API)
-+/
-void SetWindowClipRectBeforeSetChannel(scope ImGuiWindow* window, ImRect clip_rect) @trusted
-{
-    igSetWindowClipRectBeforeSetChannel(window, clip_rect);
-}
-
-void BeginColumns(const(char)* str_id, int count, ImGuiOldColumnFlags flags) @trusted
-{
-    igBeginColumns(str_id, count, flags);
-}
-
-void EndColumns() @trusted
-{
-    igEndColumns();
-}
-
-void PushColumnClipRect(int column_index) @trusted
-{
-    igPushColumnClipRect(column_index);
-}
-
-void PushColumnsBackground() @trusted
-{
-    igPushColumnsBackground();
-}
-
-void PopColumnsBackground() @trusted
-{
-    igPopColumnsBackground();
-}
-
-ImGuiID GetColumnsID(const(char)* str_id, int count) @trusted
-{
-    return igGetColumnsID(str_id, count);
-}
-
-ImGuiOldColumns* FindOrCreateColumns(scope ImGuiWindow* window, ImGuiID id) @trusted
-{
-    return igFindOrCreateColumns(window, id);
-}
-
-float GetColumnOffsetFromNorm(ImGuiOldColumns* columns, float offset_norm) @trusted
-{
-    return igGetColumnOffsetFromNorm(columns, offset_norm);
-}
-
-float GetColumnNormFromOffset(ImGuiOldColumns* columns, float offset) @trusted
-{
-    return igGetColumnNormFromOffset(columns, offset);
-}
-
-/++
-+ Tables: Candidates for public API
-+/
-void TableOpenContextMenu() @trusted
-{
-    igTableOpenContextMenu();
-}
-
-void TableOpenContextMenuEx(int column_n) @trusted
-{
-    igTableOpenContextMenuEx(column_n);
-}
-
-void TableSetColumnWidth(int column_n, float width) @trusted
-{
-    igTableSetColumnWidth(column_n, width);
-}
-
-void TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs) @trusted
-{
-    igTableSetColumnSortDirection(column_n, sort_direction, append_to_sort_specs);
-}
-
-int TableGetHoveredRow() @trusted
-{
-    return igTableGetHoveredRow();
-}
-
-float TableGetHeaderRowHeight() @trusted
-{
-    return igTableGetHeaderRowHeight();
-}
-
-float TableGetHeaderAngledMaxLabelWidth() @trusted
-{
-    return igTableGetHeaderAngledMaxLabelWidth();
-}
-
-void TablePushBackgroundChannel() @trusted
-{
-    igTablePushBackgroundChannel();
-}
-
-void TablePopBackgroundChannel() @trusted
-{
-    igTablePopBackgroundChannel();
-}
-
-void TablePushColumnChannel(int column_n) @trusted
-{
-    igTablePushColumnChannel(column_n);
-}
-
-void TablePopColumnChannel() @trusted
-{
-    igTablePopColumnChannel();
-}
-
-void TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label_width, ImGuiTableHeaderData* data, int data_count) @trusted
-{
-    igTableAngledHeadersRowEx(row_id, angle, max_label_width, data, data_count);
-}
-
-/++
-+ Tables: Internals
-+/
-ImGuiTable* GetCurrentTable() @trusted
-{
-    return igGetCurrentTable();
-}
-
-ImGuiTable* TableFindByID(ImGuiID id) @trusted
-{
-    return igTableFindByID(id);
-}
-
-bool BeginTableWithID(const(char)* name, ImGuiID id, int columns_count, ImGuiTableFlags flags) @trusted
-{
-    return igBeginTableWithID(name, id, columns_count, flags);
-}
-
-bool BeginTableWithIDEx(const(char)* name, ImGuiID id, int columns_count, ImGuiTableFlags flags, ImVec2 outer_size, float inner_width) @trusted
-{
-    return igBeginTableWithIDEx(name, id, columns_count, flags, outer_size, inner_width);
-}
-
-void TableBeginInitMemory(scope ImGuiTable* table, int columns_count) @trusted
-{
-    igTableBeginInitMemory(table, columns_count);
-}
-
-void TableBeginApplyRequests(scope ImGuiTable* table) @trusted
-{
-    igTableBeginApplyRequests(table);
-}
-
-void TableSetupDrawChannels(scope ImGuiTable* table) @trusted
-{
-    igTableSetupDrawChannels(table);
-}
-
-void TableUpdateLayout(scope ImGuiTable* table) @trusted
-{
-    igTableUpdateLayout(table);
-}
-
-void TableUpdateBorders(scope ImGuiTable* table) @trusted
-{
-    igTableUpdateBorders(table);
-}
-
-void TableUpdateColumnsWeightFromWidth(scope ImGuiTable* table) @trusted
-{
-    igTableUpdateColumnsWeightFromWidth(table);
-}
-
-void TableApplyExternalUnclipRect(scope ImGuiTable* table, scope ImRect* rect) @trusted
-{
-    igTableApplyExternalUnclipRect(table, rect);
-}
-
-void TableDrawBorders(scope ImGuiTable* table) @trusted
-{
-    igTableDrawBorders(table);
-}
-
-void TableDrawDefaultContextMenu(scope ImGuiTable* table, ImGuiTableFlags flags_for_section_to_display) @trusted
-{
-    igTableDrawDefaultContextMenu(table, flags_for_section_to_display);
-}
-
-bool TableBeginContextMenuPopup(scope ImGuiTable* table) @trusted
-{
-    return igTableBeginContextMenuPopup(table);
-}
-
-void TableMergeDrawChannels(scope ImGuiTable* table) @trusted
-{
-    igTableMergeDrawChannels(table);
-}
-
-ImGuiTableInstanceData* TableGetInstanceData(scope ImGuiTable* table, int instance_no) @trusted
-{
-    return igTableGetInstanceData(table, instance_no);
-}
-
-ImGuiID TableGetInstanceID(scope ImGuiTable* table, int instance_no) @trusted
-{
-    return igTableGetInstanceID(table, instance_no);
-}
-
-void TableFixDisplayOrder(scope ImGuiTable* table) @trusted
-{
-    igTableFixDisplayOrder(table);
-}
-
-void TableSortSpecsSanitize(scope ImGuiTable* table) @trusted
-{
-    igTableSortSpecsSanitize(table);
-}
-
-void TableSortSpecsBuild(scope ImGuiTable* table) @trusted
-{
-    igTableSortSpecsBuild(table);
-}
-
-ImGuiSortDirection TableGetColumnNextSortDirection(scope ImGuiTableColumn* column) @trusted
-{
-    return igTableGetColumnNextSortDirection(column);
-}
-
-void TableFixColumnSortDirection(scope ImGuiTable* table, scope ImGuiTableColumn* column) @trusted
-{
-    igTableFixColumnSortDirection(table, column);
-}
-
-float TableGetColumnWidthAuto(scope ImGuiTable* table, scope ImGuiTableColumn* column) @trusted
-{
-    return igTableGetColumnWidthAuto(table, column);
-}
-
-void TableBeginRow(scope ImGuiTable* table) @trusted
-{
-    igTableBeginRow(table);
-}
-
-void TableEndRow(scope ImGuiTable* table) @trusted
-{
-    igTableEndRow(table);
-}
-
-void TableBeginCell(scope ImGuiTable* table, int column_n) @trusted
-{
-    igTableBeginCell(table, column_n);
-}
-
-void TableEndCell(scope ImGuiTable* table) @trusted
-{
-    igTableEndCell(table);
-}
-
-ImRect TableGetCellBgRect(ImGuiTable* table, int column_n) @trusted
-{
-    return igTableGetCellBgRect(table, column_n);
-}
-
-const(char)* TableGetColumnNameImGuiTablePtr(ImGuiTable* table, int column_n) @trusted
-{
-    return igTableGetColumnNameImGuiTablePtr(table, column_n);
-}
-
-ImGuiID TableGetColumnResizeID(scope ImGuiTable* table, int column_n) @trusted
-{
-    return igTableGetColumnResizeID(table, column_n);
-}
-
-ImGuiID TableGetColumnResizeIDEx(scope ImGuiTable* table, int column_n, int instance_no) @trusted
-{
-    return igTableGetColumnResizeIDEx(table, column_n, instance_no);
-}
-
-float TableCalcMaxColumnWidth(ImGuiTable* table, int column_n) @trusted
-{
-    return igTableCalcMaxColumnWidth(table, column_n);
-}
-
-void TableSetColumnWidthAutoSingle(scope ImGuiTable* table, int column_n) @trusted
-{
-    igTableSetColumnWidthAutoSingle(table, column_n);
-}
-
-void TableSetColumnWidthAutoAll(scope ImGuiTable* table) @trusted
-{
-    igTableSetColumnWidthAutoAll(table);
-}
-
-void TableSetColumnDisplayOrder(scope ImGuiTable* table, int column_n, int dst_order) @trusted
-{
-    igTableSetColumnDisplayOrder(table, column_n, dst_order);
-}
-
-void TableQueueSetColumnDisplayOrder(scope ImGuiTable* table, int column_n, int dst_order) @trusted
-{
-    igTableQueueSetColumnDisplayOrder(table, column_n, dst_order);
-}
-
-void TableRemove(scope ImGuiTable* table) @trusted
-{
-    igTableRemove(table);
-}
-
-void TableGcCompactTransientBuffers(scope ImGuiTable* table) @trusted
-{
-    igTableGcCompactTransientBuffers(table);
-}
-
-void TableGcCompactTransientBuffersImGuiTableTempDataPtr(scope ImGuiTableTempData* table) @trusted
-{
-    igTableGcCompactTransientBuffersImGuiTableTempDataPtr(table);
-}
-
-void TableGcCompactSettings() @trusted
-{
-    igTableGcCompactSettings();
-}
-
-/++
-+ Tables: Settings
-+/
-void TableLoadSettings(scope ImGuiTable* table) @trusted
-{
-    igTableLoadSettings(table);
-}
-
-void TableSaveSettings(scope ImGuiTable* table) @trusted
-{
-    igTableSaveSettings(table);
-}
-
-void TableResetSettings(scope ImGuiTable* table) @trusted
-{
-    igTableResetSettings(table);
-}
-
-ImGuiTableSettings* TableGetBoundSettings(scope ImGuiTable* table) @trusted
-{
-    return igTableGetBoundSettings(table);
-}
-
-void TableSettingsAddSettingsHandler() @trusted
-{
-    igTableSettingsAddSettingsHandler();
-}
-
-ImGuiTableSettings* TableSettingsCreate(ImGuiID id, int columns_count) @trusted
-{
-    return igTableSettingsCreate(id, columns_count);
-}
-
-ImGuiTableSettings* TableSettingsFindByID(ImGuiID id) @trusted
-{
-    return igTableSettingsFindByID(id);
 }
 
 /++
@@ -4758,9 +4810,9 @@ void RenderNavCursor(ImRect bb, ImGuiID id) @trusted
     igRenderNavCursor(bb, id);
 }
 
-void RenderNavCursorEx(ImRect bb, ImGuiID id, ImGuiNavRenderCursorFlags flags) @trusted
+void RenderNavCursorEx(ImRect bb, ImGuiID id, ImGuiNavRenderCursorFlags flags, float rounding) @trusted
 {
-    igRenderNavCursorEx(bb, id, flags);
+    igRenderNavCursorEx(bb, id, flags, rounding);
 }
 
 void RenderNavHighlight(ImRect bb, ImGuiID id) @trusted
@@ -5374,9 +5426,9 @@ void DebugNodeTable(scope ImGuiTable* table) @trusted
     igDebugNodeTable(table);
 }
 
-void DebugNodeTableSettings(scope ImGuiTableSettings* settings) @trusted
+void DebugNodeTableSettings(scope ImGuiTableSettings* settings, scope ImGuiTable* table) @trusted
 {
-    igDebugNodeTableSettings(settings);
+    igDebugNodeTableSettings(settings, table);
 }
 
 void DebugNodeInputTextState(scope ImGuiInputTextState* state) @trusted
