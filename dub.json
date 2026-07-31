@@ -2,7 +2,7 @@
 	"name": "sokol-d",
 	"description": "D bindings for sokol",
 	"license": "Zlib",
-	"version": "0.4.5",
+	"version": "0.4.6",
 	"authors": [
 		"Matheus França",
 		"Andre Weissflog"
@@ -52,11 +52,15 @@
 	},
 	"dflags-dmd": [
 		"-verrors=context",
-		"-preview=all"
+		"-preview=safer",
+		"-preview=dip1000",
+		"-preview=rvaluerefparam"
 	],
 	"dflags-ldc": [
 		"--verrors-context",
-		"-preview=all"
+		"--preview=safer",
+		"--preview=dip1000",
+		"--preview=rvaluerefparam"
 	],
 	"lflags-posix": [
 		"-L$PACKAGE_DIR/build"
