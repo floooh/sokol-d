@@ -49,9 +49,11 @@ dub init -t sokol-d <project-name>
 - cube
 - debugtext
 - droptest
+- framebuffer
 - imgui
 - instancing
 - instancingcompute
+- letterbox
 - nuklear
 - saudio
 - sglcontext

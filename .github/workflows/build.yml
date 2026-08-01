@@ -46,9 +46,11 @@ jobs:
           dub build :cube
           dub build :debugtext
           dub build :droptest
+          dub build :framebuffer
           dub build :imgui
           dub build :instancing
           dub build :instancingcompute
+          dub build :letterbox
           dub build :mrt
           dub build :noninterleaved
           dub build :nuklear
@@ -83,9 +85,11 @@ jobs:
           dub build :cube -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :debugtext -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :droptest -c wasm -v --arch wasm32-unknown-emscripten-wasm
+          dub build :framebuffer -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :imgui -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :instancing -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :instancingcompute -c wasm -v --arch wasm32-unknown-emscripten-wasm
+          dub build :letterbox -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :mrt -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :noninterleaved -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :nuklear -c wasm -v --arch wasm32-unknown-emscripten-wasm
@@ -119,9 +123,11 @@ jobs:
           dub build :cube -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :debugtext -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :droptest -c wgpu -v --arch wasm32-unknown-emscripten-wasm
+          dub build :framebuffer -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :imgui -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :instancing -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :instancingcompute -c wgpu -v --arch wasm32-unknown-emscripten-wasm
+          dub build :letterbox -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :mrt -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :noninterleaved -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :nuklear -c wgpu -v --arch wasm32-unknown-emscripten-wasm
