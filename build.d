@@ -518,6 +518,7 @@ void buildLibSokol(LibSokolOptions opts) @safe
         "sokol_log.c", "sokol_app.c", "sokol_gfx.c", "sokol_time.c",
         "sokol_audio.c", "sokol_gl.c", "sokol_debugtext.c", "sokol_shape.c",
         "sokol_glue.c", "sokol_fetch.c", "sokol_memtrack.c", "sokol_args.c",
+        "sokol_letterbox.c", "sokol_framebuffer.c",
     ];
 
     // On macOS the sokol .c headers use ObjC syntax — compile them as ObjC.

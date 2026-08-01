@@ -14,9 +14,11 @@ Available examples:
 - cube
 - debugtext
 - droptest
+- framebuffer
 - imgui
 - instancing
 - instancingcompute
+- letterbox
 - nuklear
 - saudio
 - sglcontext
