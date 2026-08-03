@@ -41,6 +41,7 @@ jobs:
         working-directory: examples
         run: |
           dub build :blend
+          dub build :box3d
           dub build :bufferoffsets
           dub build :clear
           dub build :cube
@@ -80,6 +81,7 @@ jobs:
         working-directory: examples
         run: |
           dub build :blend -c wasm -v --arch wasm32-unknown-emscripten-wasm
+          dub build :box3d -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :bufferoffsets -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :clear -c wasm -v --arch wasm32-unknown-emscripten-wasm
           dub build :cube -c wasm -v --arch wasm32-unknown-emscripten-wasm
@@ -118,6 +120,7 @@ jobs:
         working-directory: examples
         run: |
           dub build :blend -c wgpu -v --arch wasm32-unknown-emscripten-wasm
+          dub build :box3d -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :bufferoffsets -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :clear -c wgpu -v --arch wasm32-unknown-emscripten-wasm
           dub build :cube -c wgpu -v --arch wasm32-unknown-emscripten-wasm
@@ -173,14 +176,17 @@ jobs:
         working-directory: examples
         run: |
           dub build :blend -c vulkan
+          dub build :box3d -c vulkan
           dub build :bufferoffsets -c vulkan
           dub build :clear -c vulkan
           dub build :cube -c vulkan
           dub build :debugtext -c vulkan
           dub build :droptest -c vulkan
+          dub build :framebuffer -c vulkan
           dub build :imgui -c vulkan
           dub build :instancing -c vulkan
           dub build :instancingcompute -c vulkan
+          dub build :letterbox -c vulkan
           dub build :mrt -c vulkan
           dub build :noninterleaved -c vulkan
           dub build :nuklear -c vulkan

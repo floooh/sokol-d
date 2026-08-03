@@ -44,6 +44,7 @@ dub init -t sokol-d <project-name>
 
 ## Available Examples
 - blend
+- box3d
 - bufferoffsets
 - clear
 - cube
@@ -72,6 +73,11 @@ Available configurations:
     sokol-wayland-static     # Wayland static build for Linux
     sokol-wayland-shared     # Wayland shared build for Linux
     sokol-vulkan             # Sokol + Vulkan Static library build
+    box3d-static             # Sokol + Box3D + Dear ImGui static build
+    box3d-shared             # Sokol + Box3D + Dear ImGui shared build
+    box3d-vulkan             # Sokol + Box3D + Dear ImGui + Vulkan static build
+    box3d-wgles3             # Sokol + Box3D + Dear ImGui WebGL ES3 build
+    box3d-wgpu               # Sokol + Box3D + Dear ImGui WebGPU build
     imgui-static             # Sokol + Dear ImGui static build
     imgui-shared             # Sokol + Dear ImGui shared build
     imgui-vulkan             # Sokol + Dear ImGui + Vulkan static build

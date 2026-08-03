@@ -77,6 +77,8 @@
 				"src/emscripten/*.d",
 				"src/imgui/*.d",
 				"src/imgui/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c",
 				"src/nuklear/*.d",
 				"src/nuklear/*.c"
 			],
@@ -137,6 +139,8 @@
 				"src/emscripten/*.d",
 				"src/imgui/*.d",
 				"src/imgui/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c",
 				"src/nuklear/*.d",
 				"src/nuklear/*.c"
 			],
@@ -198,6 +202,8 @@
 				"src/emscripten/*.d",
 				"src/imgui/*.d",
 				"src/imgui/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c",
 				"src/nuklear/*.d",
 				"src/nuklear/*.c"
 			],
@@ -238,6 +244,8 @@
 				"src/emscripten/*.d",
 				"src/imgui/*.d",
 				"src/imgui/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c",
 				"src/nuklear/*.d",
 				"src/nuklear/*.c"
 			],
@@ -279,6 +287,8 @@
 				"src/emscripten/*.d",
 				"src/imgui/*.d",
 				"src/imgui/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c",
 				"src/nuklear/*.d",
 				"src/nuklear/*.c"
 			],
@@ -329,6 +339,8 @@
 			"excludedSourceFiles": [
 				"src/sokol/nuklear.d",
 				"src/emscripten/*.d",
+				"src/box3d/*.d",
+				"src/box3d/*.c",
 				"src/nuklear/*.d",
 				"src/nuklear/*.c"
 			],
@@ -394,6 +406,8 @@
 			"excludedSourceFiles": [
 				"src/sokol/nuklear.d",
 				"src/emscripten/*.d",
+				"src/box3d/*.d",
+				"src/box3d/*.c",
 				"src/nuklear/*.d",
 				"src/nuklear/*.c"
 			],
@@ -465,6 +479,8 @@
 			"excludedSourceFiles": [
 				"src/sokol/nuklear.d",
 				"src/emscripten/*.d",
+				"src/box3d/*.d",
+				"src/box3d/*.c",
 				"src/nuklear/*.d",
 				"src/nuklear/*.c"
 			],
@@ -514,6 +530,13 @@
 		},
 		{
 			"name": "imgui-wgles3",
+			"excludedSourceFiles": [
+				"src/sokol/nuklear.d",
+				"src/nuklear/*.d",
+				"src/nuklear/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c"
+			],
 			"libs": [
 				"sokol",
 				"cimgui"
@@ -538,6 +561,13 @@
 		},
 		{
 			"name": "imgui-wgpu",
+			"excludedSourceFiles": [
+				"src/sokol/nuklear.d",
+				"src/nuklear/*.d",
+				"src/nuklear/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c"
+			],
 			"libs": [
 				"sokol",
 				"cimgui"
@@ -567,6 +597,8 @@
 				"src/sokol/nuklear.d",
 				"src/imgui/*.d",
 				"src/imgui/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c",
 				"src/nuklear/*.d",
 				"src/nuklear/*.c"
 			],
@@ -597,6 +629,8 @@
 				"src/sokol/nuklear.d",
 				"src/imgui/*.d",
 				"src/imgui/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c",
 				"src/nuklear/*.d",
 				"src/nuklear/*.c"
 			],
@@ -624,7 +658,9 @@
 			"excludedSourceFiles": [
 				"src/sokol/*imgui.d",
 				"src/imgui/*.d",
-				"src/imgui/*.c"
+				"src/imgui/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c"
 			],
 			"dflags-dmd": [
 				"-i=sokol",
@@ -686,7 +722,9 @@
 			"excludedSourceFiles": [
 				"src/sokol/*imgui.d",
 				"src/imgui/*.d",
-				"src/imgui/*.c"
+				"src/imgui/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c"
 			],
 			"dflags-dmd": [
 				"-i=sokol",
@@ -752,7 +790,9 @@
 			"excludedSourceFiles": [
 				"src/sokol/*imgui.d",
 				"src/imgui/*.d",
-				"src/imgui/*.c"
+				"src/imgui/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c"
 			],
 			"dflags-dmd": [
 				"-i=sokol",
@@ -808,7 +848,9 @@
 			"excludedSourceFiles": [
 				"src/sokol/*imgui.d",
 				"src/imgui/*.d",
-				"src/imgui/*.c"
+				"src/imgui/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c"
 			],
 			"dflags": [
 				"-P-I$PACKAGE_DIR/vendor/emsdk/upstream/emscripten/cache/sysroot/include",
@@ -837,7 +879,9 @@
 			"excludedSourceFiles": [
 				"src/sokol/*imgui.d",
 				"src/imgui/*.d",
-				"src/imgui/*.c"
+				"src/imgui/*.c",
+				"src/box3d/*.d",
+				"src/box3d/*.c"
 			],
 			"dflags": [
 				"-P-I$PACKAGE_DIR/vendor/emsdk/upstream/emscripten/cache/sysroot/include",
@@ -856,11 +900,278 @@
 			]
 		},
 		{
+			"name": "box3d-static",
+			"targetName": "box3d_d",
+			"targetPath": "build",
+			"excludedSourceFiles": [
+				"src/sokol/nuklear.d",
+				"src/emscripten/*.d",
+				"src/nuklear/*.d",
+				"src/nuklear/*.c"
+			],
+			"dflags-dmd": [
+				"-i=sokol",
+				"-i=shaders",
+				"-i=handmade",
+				"-i=imgui",
+				"-i=box3d",
+				"-P-I$PACKAGE_DIR/vendor/imgui/src",
+				"-P-I$PACKAGE_DIR/vendor/box3d/include"
+			],
+			"dflags-ldc": [
+				"-i=sokol",
+				"-i=shaders",
+				"-i=handmade",
+				"-i=imgui",
+				"-i=box3d",
+				"-P-I$PACKAGE_DIR/vendor/imgui/src",
+				"-P-I$PACKAGE_DIR/vendor/box3d/include",
+				"-mcpu=native"
+			],
+			"libs": [
+				"sokol",
+				"box3d",
+				"cimgui"
+			],
+			"libs-linux": [
+				"stdc++",
+				"X11",
+				"GL",
+				"Xi",
+				"Xcursor",
+				"asound",
+				"m",
+				"dl"
+			],
+			"libs-osx": [
+				"c++",
+				"objC"
+			],
+			"libs-windows": [
+				"dxgi",
+				"d3d11"
+			],
+			"lflags-osx": [
+				"-framework",
+				"Cocoa",
+				"-framework",
+				"QuartzCore",
+				"-framework",
+				"Foundation",
+				"-framework",
+				"Metal",
+				"-framework",
+				"AudioToolbox"
+			],
+			"preBuildCommands": [
+				"$DC -run $PACKAGE_DIR/build.d --with-sokol-imgui --with-sokol-box3d --target=native"
+			]
+		},
+		{
+			"name": "box3d-shared",
+			"targetName": "box3d_d",
+			"targetPath": "build",
+			"targetType": "dynamicLibrary",
+			"excludedSourceFiles": [
+				"src/sokol/nuklear.d",
+				"src/emscripten/*.d",
+				"src/nuklear/*.d",
+				"src/nuklear/*.c"
+			],
+			"dflags-dmd": [
+				"-i=sokol",
+				"-i=shaders",
+				"-i=handmade",
+				"-i=imgui",
+				"-i=box3d",
+				"-P-I$PACKAGE_DIR/vendor/imgui/src",
+				"-P-I$PACKAGE_DIR/vendor/box3d/include"
+			],
+			"dflags-ldc": [
+				"-i=sokol",
+				"-i=shaders",
+				"-i=handmade",
+				"-i=imgui",
+				"-i=box3d",
+				"-P-I$PACKAGE_DIR/vendor/imgui/src",
+				"-P-I$PACKAGE_DIR/vendor/box3d/include",
+				"-mcpu=native",
+				"--link-defaultlib-shared=false"
+			],
+			"libs": [
+				"sokol",
+				"box3d",
+				"cimgui"
+			],
+			"libs-linux": [
+				"stdc++",
+				"X11",
+				"GL",
+				"Xi",
+				"Xcursor",
+				"asound",
+				"m",
+				"dl"
+			],
+			"libs-osx": [
+				"c++",
+				"objC"
+			],
+			"libs-windows": [
+				"dxgi",
+				"d3d11"
+			],
+			"libs-windows-dmd": [
+				"dxgi",
+				"d3d11",
+				"msvcrt"
+			],
+			"lflags-osx": [
+				"-framework",
+				"Cocoa",
+				"-framework",
+				"QuartzCore",
+				"-framework",
+				"Foundation",
+				"-framework",
+				"Metal",
+				"-framework",
+				"AudioToolbox"
+			],
+			"preBuildCommands": [
+				"$DC -run $PACKAGE_DIR/build.d --with-sokol-imgui --with-sokol-box3d --linkage=dynamic --target=native"
+			]
+		},
+		{
+			"name": "box3d-vulkan",
+			"targetName": "box3d_d",
+			"targetPath": "build",
+			"excludedSourceFiles": [
+				"src/sokol/nuklear.d",
+				"src/emscripten/*.d",
+				"src/nuklear/*.d",
+				"src/nuklear/*.c"
+			],
+			"dflags-dmd": [
+				"-i=sokol",
+				"-i=shaders",
+				"-i=handmade",
+				"-i=imgui",
+				"-i=box3d",
+				"-P-I$PACKAGE_DIR/vendor/imgui/src",
+				"-P-I$PACKAGE_DIR/vendor/box3d/include"
+			],
+			"dflags-ldc": [
+				"-i=sokol",
+				"-i=shaders",
+				"-i=handmade",
+				"-i=imgui",
+				"-i=box3d",
+				"-P-I$PACKAGE_DIR/vendor/imgui/src",
+				"-P-I$PACKAGE_DIR/vendor/box3d/include",
+				"-mcpu=native"
+			],
+			"environments-windows": {
+				"ENVIRONMENTS": "root.environments",
+				"VULKAN_SDK": "${VULKAN_SDK}"
+			},
+			"lflags-windows": [
+				"/LIBPATH:$VULKAN_SDK\\Lib"
+			],
+			"libs": [
+				"sokol",
+				"box3d",
+				"cimgui"
+			],
+			"libs-linux": [
+				"stdc++",
+				"X11",
+				"vulkan",
+				"Xi",
+				"Xcursor",
+				"asound",
+				"m",
+				"dl"
+			],
+			"libs-windows": [
+				"imm32",
+				"vulkan-1"
+			],
+			"preBuildCommands": [
+				"$DC -run $PACKAGE_DIR/build.d --with-sokol-imgui --with-sokol-box3d --backend=vulkan --target=native"
+			]
+		},
+		{
+			"name": "box3d-wgles3",
+			"libs": [
+				"sokol",
+				"box3d",
+				"cimgui"
+			],
+			"targetName": "box3d_d",
+			"targetPath": "build",
+			"excludedSourceFiles": [
+				"src/sokol/nuklear.d",
+				"src/nuklear/*.d",
+				"src/nuklear/*.c"
+			],
+			"dflags": [
+				"-P-I$PACKAGE_DIR/vendor/emsdk/upstream/emscripten/cache/sysroot/include",
+				"-P-I$PACKAGE_DIR/vendor/imgui/src",
+				"-P-I$PACKAGE_DIR/vendor/box3d/include",
+				"-i=sokol",
+				"-i=shaders",
+				"-i=handmade",
+				"-i=imgui",
+				"-i=box3d",
+				"-i=emscripten",
+				"-defaultlib=",
+				"--disable-linker-strip-dead",
+				"-gcc=$PACKAGE_DIR/vendor/emsdk/upstream/bin/wasm32-clang"
+			],
+			"preGenerateCommands": [
+				"$DC -run $PACKAGE_DIR/build.d --target=wasm --with-sokol-imgui --with-sokol-box3d --verbose"
+			]
+		},
+		{
+			"name": "box3d-wgpu",
+			"libs": [
+				"sokol",
+				"box3d",
+				"cimgui"
+			],
+			"targetName": "box3d_d",
+			"targetPath": "build",
+			"excludedSourceFiles": [
+				"src/sokol/nuklear.d",
+				"src/nuklear/*.d",
+				"src/nuklear/*.c"
+			],
+			"dflags": [
+				"-P-I$PACKAGE_DIR/vendor/emsdk/upstream/emscripten/cache/sysroot/include",
+				"-P-I$PACKAGE_DIR/vendor/imgui/src",
+				"-P-I$PACKAGE_DIR/vendor/box3d/include",
+				"-i=sokol",
+				"-i=shaders",
+				"-i=handmade",
+				"-i=imgui",
+				"-i=box3d",
+				"-i=emscripten",
+				"-defaultlib=",
+				"--disable-linker-strip-dead",
+				"-gcc=$PACKAGE_DIR/vendor/emsdk/upstream/bin/wasm32-clang"
+			],
+			"preGenerateCommands": [
+				"$DC -run $PACKAGE_DIR/build.d --target=wasm --backend=wgpu --with-sokol-imgui --with-sokol-box3d --verbose"
+			]
+		},
+		{
 			"name": "genshaders",
 			"excludedSourceFiles": [
 				"src/sokol/*.d",
 				"src/imgui/*.d",
-				"src/nuklear/*.d"
+				"src/nuklear/*.d",
+				"src/box3d/*.d"
 			],
 			"preGenerateCommands": [
 				"$DC -run $PACKAGE_DIR/build.d --download-sokol-tools"
@@ -877,7 +1188,8 @@
 			"excludedSourceFiles": [
 				"src/sokol/*.d",
 				"src/imgui/*.d",
-				"src/nuklear/*.d"
+				"src/nuklear/*.d",
+				"src/box3d/*.d"
 			],
 			"preGenerateCommands": [
 				"$DC -run $PACKAGE_DIR/build.d --download-sokol-tools --backend=vulkan"

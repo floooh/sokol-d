@@ -128,6 +128,27 @@ struct Vec3
     }
 }
 
+/** 4D Vector structure with x, y, z and w components */
+struct Vec4
+{
+    float x = 0.0, y = 0.0, z = 0.0, w = 0.0;
+
+    /** Creates a zero vector */
+    static Vec4 zero() @nogc nothrow
+    {
+        return Vec4(0, 0, 0, 0);
+    }
+
+    /** Constructor for Vec4 */
+    this(float x, float y, float z, float w) @nogc nothrow
+    {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.w = w;
+    }
+}
+
 /** 4x4 Matrix structure for transformations */
 struct Mat4
 {
@@ -169,8 +190,8 @@ struct Mat4
         Mat4 result = Mat4.identity;
 
         float t = tan(fov * (PI / 360.0));
-        result.m[0][0] = 1.0 / t;
-        result.m[1][1] = aspect / t;
+        result.m[0][0] = 1.0 / (aspect * t);
+        result.m[1][1] = 1.0 / t;
         result.m[2][3] = -1.0;
         result.m[2][2] = (near + far) / (near - far);
         result.m[3][2] = (2.0 * near * far) / (near - far);
@@ -233,6 +254,69 @@ struct Mat4
         return result;
     }
 
+    /** Transposes the matrix */
+    static Mat4 transpose(Mat4 m) @nogc nothrow
+    {
+        Mat4 result = Mat4.zero;
+        foreach (col; 0 .. 4)
+        {
+            foreach (row; 0 .. 4)
+            {
+                result.m[col][row] = m.m[row][col];
+            }
+        }
+        return result;
+    }
+
+    /** Creates an off-center orthographic projection matrix */
+    static Mat4 ortho(float left, float right, float bottom, float top, float near, float far) @nogc nothrow
+    {
+        Mat4 result = Mat4.identity;
+
+        result.m[0][0] = 2.0 / (right - left);
+        result.m[1][1] = 2.0 / (top - bottom);
+        result.m[2][2] = 1.0 / (far - near);
+        result.m[3][0] = -(right + left) / (right - left);
+        result.m[3][1] = -(top + bottom) / (top - bottom);
+        result.m[3][2] = -near / (far - near);
+        result.m[3][3] = 1.0;
+
+        return result;
+    }
+
+    /** Creates a rotation matrix from a quaternion (w = cos, xyz = axis*sin) */
+    static Mat4 fromQuat(float x, float y, float z, float w) @nogc nothrow
+    {
+        Mat4 result = Mat4.identity;
+
+        float x2 = x + x;
+        float y2 = y + y;
+        float z2 = z + z;
+        float xx = x * x2;
+        float xy = x * y2;
+        float xz = x * z2;
+        float yy = y * y2;
+        float yz = y * z2;
+        float zz = z * z2;
+        float wx = w * x2;
+        float wy = w * y2;
+        float wz = w * z2;
+
+        result.m[0][0] = 1.0 - (yy + zz);
+        result.m[0][1] = xy + wz;
+        result.m[0][2] = xz - wy;
+
+        result.m[1][0] = xy - wz;
+        result.m[1][1] = 1.0 - (xx + zz);
+        result.m[1][2] = yz + wx;
+
+        result.m[2][0] = xz + wy;
+        result.m[2][1] = yz - wx;
+        result.m[2][2] = 1.0 - (xx + yy);
+
+        return result;
+    }
+
     /** Creates a translation matrix */
     static Mat4 translate(Vec3 translation) @nogc nothrow
     {
@@ -250,6 +334,12 @@ struct Mat4
 float radians(float deg) @nogc nothrow
 {
     return deg * (PI / 180.0);
+}
+
+/** Clamps a value to the range [lo, hi] */
+float clamp(float val, float lo, float hi) @nogc nothrow
+{
+    return val < lo ? lo : (val > hi ? hi : val);
 }
 
 version (unittest)

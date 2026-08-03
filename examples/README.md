@@ -9,6 +9,7 @@
 
 Available examples:
 - blend
+- box3d
 - bufferoffsets
 - clear
 - cube

@@ -1,0 +1,84 @@
+{
+    "name": "box3d",
+    "sourceFiles": [
+        "../shaders/box3d.d"
+    ],
+    "dependencies": {
+        "sokol-d": {
+            "path": "../.."
+        }
+    },
+    "environments": {
+        "SOKOL_ROOTPATH": "${SOKOL_D_PACKAGE_DIR}"
+    },
+    "targetPath": "build",
+    "targetName": "box3d",
+    "buildTypes": {
+        "debug": {
+            "buildOptions": [
+                "debugMode",
+                "debugInfo"
+            ]
+        },
+        "release": {
+            "buildOptions": [
+                "releaseMode",
+                "inline",
+                "optimize"
+            ]
+        },
+        "release-nobounds": {
+            "buildOptions": [
+                "releaseMode",
+                "inline",
+                "noBoundsCheck",
+                "optimize"
+            ]
+        },
+        "release-betterc": {
+            "buildOptions": [
+                "betterC",
+                "releaseMode",
+                "inline",
+                "noBoundsCheck",
+                "optimize"
+            ]
+        }
+    },
+    "configurations": [
+        {
+            "name": "native",
+            "targetType": "executable",
+            "subConfigurations": {
+                "sokol-d": "box3d-static"
+            }
+        },
+        {
+            "name": "vulkan",
+            "targetType": "executable",
+            "subConfigurations": {
+                "sokol-d": "box3d-vulkan"
+            }
+        },
+        {
+            "name": "wasm",
+            "targetType": "staticLibrary",
+            "postGenerateCommands": [
+                "$DC -run ${SOKOL_D_PACKAGE_DIR}/build.d -- --target=wasm --with-sokol-imgui --with-sokol-box3d --backend=gles3 --link=box3d --verbose"
+            ],
+            "subConfigurations": {
+                "sokol-d": "box3d-wgles3"
+            }
+        },
+        {
+            "name": "wgpu",
+            "targetType": "staticLibrary",
+            "postGenerateCommands": [
+                "$DC -run ${SOKOL_D_PACKAGE_DIR}/build.d -- --target=wasm --with-sokol-imgui --with-sokol-box3d --backend=wgpu --link=box3d --verbose"
+            ],
+            "subConfigurations": {
+                "sokol-d": "box3d-wgpu"
+            }
+        }
+    ]
+}

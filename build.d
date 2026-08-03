@@ -15,6 +15,7 @@ import std;
 enum emsdk_version = "6.0.4";
 enum imgui_version = "1.92.9";
 enum nuklear_version = "v4.13.3";
+enum box3d_version = "v0.1.0";
 
 void main(string[] args) @safe
 {
@@ -29,7 +30,7 @@ void main(string[] args) @safe
         bool help, verbose, downloadEmsdk, downloadShdc;
         string compiler, target = defaultTarget(), optimize = "debug", linkExample, runExample, linkage = "static", shellFile;
         SokolBackend backend;
-        bool useX11 = true, useWayland, useEgl, useLTO, withSokolImgui, withSokolNuklear;
+        bool useX11 = true, useWayland, useEgl, useLTO, withSokolImgui, withSokolNuklear, withSokolBox3d;
     }
 
     Options opts;
@@ -61,6 +62,9 @@ void main(string[] args) @safe
         break;
     case "--with-sokol-nuklear":
         withSokolNuklear = true;
+        break;
+    case "--with-sokol-box3d":
+        withSokolBox3d = true;
         break;
     case "--enable-wayland":
         useWayland = true;
@@ -118,6 +122,7 @@ void main(string[] args) @safe
         writeln("  --run=<example>          Run WASM example (e.g., triangle)");
         writeln("  --with-sokol-imgui       Enable sokol_imgui integration");
         writeln("  --with-sokol-nuklear     Enable sokol_nuklear integration");
+        writeln("  --with-sokol-box3d       Enable box3d physics integration");
         return;
     }
 
@@ -135,7 +140,8 @@ void main(string[] args) @safe
                 .backend);
         writeln("  Linkage: ", opts.linkage);
         writeln("  Download: Emscripten=", opts.downloadEmsdk, ", ImGui=", opts.withSokolImgui,
-            ", Nuklear=", opts.withSokolNuklear, ", Sokol-tools=", opts.downloadShdc);
+            ", Nuklear=", opts.withSokolNuklear, ", Box3D=", opts.withSokolBox3d, ", Sokol-tools=", opts
+                .downloadShdc);
         writeln("  Verbose: ", opts.verbose);
     }
 
@@ -146,6 +152,8 @@ void main(string[] args) @safe
         getIMGUI(vendorPath);
     if (opts.withSokolNuklear)
         getNuklear(vendorPath);
+    if (opts.withSokolBox3d)
+        getBox3D(vendorPath);
 
     // Execute build steps
     if (opts.downloadShdc)
@@ -168,6 +176,7 @@ void main(string[] args) @safe
             release_use_lto: opts.useLTO,
             use_imgui: opts.withSokolImgui,
             use_nuklear: opts.withSokolNuklear,
+            use_box3d: opts.withSokolBox3d,
             use_filesystem: false,
             shell_file_path: shellFile,
             extra_args: [
@@ -195,6 +204,7 @@ void main(string[] args) @safe
             use_egl: opts.useEgl,
             with_sokol_imgui: opts.withSokolImgui,
             with_sokol_nuklear: opts.withSokolNuklear,
+            with_sokol_box3d: opts.withSokolBox3d,
             linkageStatic: opts.target.canFind("wasm") ? true : opts.linkage == "static",
             verbose: opts.verbose
         };
@@ -238,6 +248,13 @@ void getNuklear(string vendor) @safe
     }
 }
 
+void getBox3D(string vendor) @safe
+{
+    writeln("Setting up Box3D");
+    downloadAndExtract("Box3D", vendor, "box3d",
+        format("https://github.com/erincatto/box3d/archive/refs/tags/%s.zip", box3d_version));
+}
+
 void buildShaders(string vendor, ref SokolBackend opts) @safe
 {
     immutable shdcPath = getSHDC(vendor);
@@ -245,7 +262,7 @@ void buildShaders(string vendor, ref SokolBackend opts) @safe
     immutable shaders = [
         "triangle", "bufferoffsets", "cube", "instancing", "instancingcompute",
         "mrt", "noninterleaved", "offscreen", "quad", "shapes", "texcube", "blend",
-        "vertexpull"
+        "vertexpull", "box3d"
     ];
 
     version (OSX)
@@ -309,7 +326,7 @@ struct LibSokolOptions
     string target, optimize, toolchain, vendor, sokolSrcPath;
     SokolBackend backend;
     bool use_egl, use_x11 = true, use_wayland, with_sokol_imgui, with_sokol_nuklear,
-    linkageStatic, verbose;
+    with_sokol_box3d, linkageStatic, verbose;
 }
 
 struct EmLinkOptions
@@ -317,7 +334,7 @@ struct EmLinkOptions
     string target, optimize, lib_main, vendor, shell_file_path;
     SokolBackend backend;
     bool release_use_closure = true, release_use_lto, use_emmalloc, use_filesystem,
-    use_imgui, use_nuklear, verbose;
+    use_imgui, use_nuklear, use_box3d, verbose;
     string[] extra_args;
 }
 
@@ -604,6 +621,49 @@ void buildLibSokol(LibSokolOptions opts) @safe
         if (exists(objPath))
             remove(objPath);
     }
+
+    // ------------------------------------------------------------------
+    // Optionally compile & archive libbox3d
+    // ------------------------------------------------------------------
+    if (opts.with_sokol_box3d)
+    {
+        immutable box3dRoot = absolutePath(buildPath(opts.vendor, "box3d"));
+        enforce(exists(buildPath(box3dRoot, "include", "box3d", "box3d.h")),
+            "Box3D source not found. Run with --with-sokol-box3d after setup.");
+
+        // Box3D needs the C17 standard and the box3d include path
+        string[] box3dFlags = cflags ~ includeFlag(buildPath(box3dRoot, "include"), opts.target);
+        // deterministic math, see https://box2d.org/posts/2024/08/determinism/
+        if (!isWin && !isWasm)
+            box3dFlags ~= "-ffp-contract=off";
+        if (isWasm)
+            box3dFlags ~= ["-msimd128", "-msse2"];
+
+        immutable box3dSources = [
+            "aabb.c", "arena_allocator.c", "bitset.c", "block_allocator.c",
+            "body.c", "broad_phase.c", "capsule.c", "compound.c",
+            "constraint_graph.c", "contact.c", "contact_solver.c",
+            "convex_manifold.c", "core.c", "distance.c", "distance_joint.c",
+            "dynamic_tree.c", "height_field.c", "hull.c", "id_pool.c",
+            "island.c", "joint.c", "manifold.c", "math_functions.c",
+            "mesh.c", "mesh_contact.c", "motor_joint.c", "mover.c",
+            "parallel_for.c", "parallel_joint.c",
+            "physics_world.c", "prismatic_joint.c", "recording.c",
+            "recording_replay.c", "revolute_joint.c", "scheduler.c",
+            "sensor.c", "shape.c", "simd.c", "solver.c", "solver_set.c",
+            "sphere.c", "spherical_joint.c", "table.c", "timer.c",
+            "triangle_manifold.c", "types.c", "weld_joint.c", "wheel_joint.c",
+            "world_snapshot.c",
+        ];
+        auto box3dObjs = compileSources(
+            box3dSources, buildDir, buildPath(box3dRoot, "src"),
+            compiler, box3dFlags, "box3d_", opts.target, opts.verbose);
+
+        immutable box3dLib = buildPath(buildDir, box3dLibName(opts.target, opts.linkageStatic));
+        linkLibrary(box3dLib, box3dObjs, opts.target, opts.linkageStatic,
+            opts.vendor, lflags, opts.verbose);
+        box3dObjs.each!(obj => exists(obj) && remove(obj));
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -623,6 +683,11 @@ string imguiLibName(string target, bool static_) @safe pure nothrow
 string nuklearLibName(string target, bool static_) @safe pure nothrow
 {
     return sharedOrStaticName("nuklear", target, static_);
+}
+
+string box3dLibName(string target, bool static_) @safe pure nothrow
+{
+    return sharedOrStaticName("box3d", target, static_);
 }
 
 string sharedOrStaticName(string base, string target, bool static_) @safe pure nothrow
@@ -754,6 +819,8 @@ void emLinkStep(EmLinkOptions opts) @safe
         cmd ~= "-lcimgui";
     if (opts.use_nuklear)
         cmd ~= "-lnuklear";
+    if (opts.use_box3d)
+        cmd ~= "-lbox3d";
 
     if (opts.optimize == "debug")
         cmd ~= ["-Og", "-sSAFE_HEAP=1", "-sSTACK_OVERFLOW_CHECK=1"];
