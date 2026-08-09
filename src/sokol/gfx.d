@@ -278,8 +278,10 @@ extern(C) struct Limits {
 +     pool slot is unoccupied and can be allocated. When a resource is
 +     created, first an id is allocated, and the resource pool slot
 +     is set to state ALLOC. After allocation, the resource is
-+     initialized, which may result in the VALID or FAILED state. The
-+     reason why allocation and initialization are separate is because
++     initialized, which may result in the VALID, UNSEALED or FAILED state.
++     UNSEALED is a special state for immutable buffers and images which
++     allows to write data into the resource after the creation call.
++     The reason why allocation and initialization are separate is because
 +     some resource types (e.g. buffers and images) might be asynchronously
 +     initialized by the user application. If a resource which is not
 +     in the VALID state is attempted to be used for rendering, rendering
@@ -291,6 +293,7 @@ extern(C) struct Limits {
 enum ResourceState {
     Initial,
     Alloc,
+    Unsealed,
     Valid,
     Failed,
     Invalid,
@@ -1141,12 +1144,18 @@ extern(C) struct Bindings {
 +         the buffer will be bound as storage buffer via storage-buffer-view
 +         in sg_bindings.views[]
 +     .immutable (default: true)
-+         the buffer content will never be updated from the CPU side (but
-+         may be written to by a compute shader)
++         the buffer content will never be updated from the CPU side while
++         in 'valid' resource state (but may be written to by a compute shader)
 +     .dynamic_update (default: false)
 +         the buffer content will be infrequently updated from the CPU side
 +     .stream_upate (default: false)
 +         the buffer content will be updated each frame from the CPU side
++     .write_unsealed (default: false)
++         when true, creates an immutable buffer in 'unsealed' resource state,
++         unsealed buffers can be populated with data by one or multiple
++         `sg_write_buffer_unsealed()` calls before being 'sealed' by
++         calling `sg_seal_buffer()` which transitions from 'unsealed'
++         to 'valid' resource state
 +/
 extern(C) struct BufferUsage {
     bool vertex_buffer = false;
@@ -1155,6 +1164,7 @@ extern(C) struct BufferUsage {
     bool _immutable = false;
     bool dynamic_update = false;
     bool stream_update = false;
+    bool write_unsealed = false;
 }
 /++
 + sg_buffer_desc
@@ -1252,6 +1262,12 @@ extern(C) struct BufferDesc {
 +         the image content is updated infrequently by the CPU via sg_update_image()
 +     .stream_update (default: false)
 +         the image content is updated each frame by the CPU via sg_update_image()
++     .write_unsealed (default: false)
++         when true, creates an immutable image in 'unsealed' resource state,
++         unsealed images can be populated with data by one or multiple
++         `sg_write_image_unsealed()` calls before being 'sealed' by
++         calling `sg_seal_image()` which transitions from 'unsealed'
++         to 'valid' resource state
 + 
 +     Note that creating a texture view from the image to be used for
 +     texture-sampling in vertex-, fragment- or compute-shaders
@@ -1265,6 +1281,7 @@ extern(C) struct ImageUsage {
     bool _immutable = false;
     bool dynamic_update = false;
     bool stream_update = false;
+    bool write_unsealed = false;
 }
 /++
 + sg_view_type
@@ -1309,9 +1326,145 @@ enum ViewType {
 +         [3] => -Y
 +         [4] => +Z
 +         [5] => -Z
++ 
++     NOTE: for more flexible resource initialization of immutable images
++     also consider the sg_write_image_unsealed() function!
 +/
 extern(C) struct ImageData {
     Range[16] mip_levels = [];
+}
+/++
++ sg_image_extent
++ 
++     Defines the size of a region within an image's mip level.
++/
+extern(C) struct ImageExtent {
+    int width = 0;
+    int height = 0;
+    int num_slices = 0;
+}
+/++
++ sg_image_location
++ 
++     Describes a source or destination location in an image.
++/
+extern(C) struct ImageLocation {
+    Image image = {};
+    int mip_level = 0;
+    int x = 0;
+    int y = 0;
+    int slice = 0;
+}
+/++
++ sg_write_image_source
++ 
++     Describes the data to be written from CPU memory into an image:
++ 
++     .data
++         Pointer to and size of the data in CPU memory
++     .offset
++         Optional offset that's added to data.ptr
++     .bytes_per_row
++         Optional number of bytes between rows of image data,
++         can be left zero-initialized when the image data is tighly packed
++         (e.g. no gaps between rows). For uncompressed pixel formats,
++         .bytes_per_row must be a multiple of the pixel size in bytes
++         (e.g. for RGBA4 a multiple of 4), for compressed pixel formats,
++         .bytes_per_row must be a multiple of the compression block
++         size in bytes
++     .bytes_per_slice
++         Optional number of bytes of between the start of array/cubemap/volume
++         slices, can be left zero-initialized when the image data is tightly
++         packed (e.g. no gaps between slices). Must be a multiple of
++         .bytes_per_row
++/
+extern(C) struct WriteImageSource {
+    Range data = {};
+    size_t offset = 0;
+    int bytes_per_row = 0;
+    int bytes_per_slice = 0;
+}
+/++
++ sg_write_image_desc
++ 
++     Describes a write operation into a single mipmap from CPU memory into
++     an image object.
++ 
++     .src
++         Defines the location and layout of the source data in CPU memory.
++         See documentation of the struct `sg_write_image_source` for details.
++     .dst
++         Defines the destination image object and the location of the
++         destination region to write the data to. See documentation of the
++         struct `sg_image_location` for details.
++     .size
++         Defines the size of the destination region. See the documentation
++         of the struct `sg_image_extent` for details.
++ 
++     Note the following rules for zero-initialized default values:
++ 
++     .src.bytes_per_row
++         Default-zero indicates that the source data is layed out as a tightly
++         packed complete mip-map (e.g. when writing data into miplevel 0 of
++         a 256x256 RGBA8 image, .src.bytes_per_row will be 1024.
++     .src.bytes_per_slice
++         Same as above, default-zero indicates that the source data is layed
++         out as a tightly packed complete mip-map (e.g. when writing data into
++         miplevel 0 of a 256x256 image, .src.bytes_per_slice will be 256*1024).
++     .size.width, .size.height, .size.num_slices
++         Default-zero means 'the remaining width, height and num_slices' taking
++         .dst.x/y/slice into account. E.g. when .dst.x/y/num_slices are all zero,
++         .size.width/height/num_slices for instance for a 256x256 cubemap the
++         default sizes are: .width=256, .height=256, .num_slices=6
++/
+extern(C) struct WriteImageDesc {
+    WriteImageSource src = {};
+    ImageLocation dst = {};
+    ImageExtent size = {};
+}
+/++
++ sg_buffer_location
++ 
++     Describes the source or destination location in a buffer.
++/
+extern(C) struct BufferLocation {
+    Buffer buffer = {};
+    size_t offset = 0;
+}
+/++
++ sg_write_buffer_source
++ 
++     Describes the data to be written from CPU memory into a buffer.
++ 
++     .data
++         Pointer to and size of the data in CPU memory
++     .offset
++         Optional offset that's added to data.ptr
++/
+extern(C) struct WriteBufferSource {
+    Range data = {};
+    size_t offset = 0;
+}
+/++
++ sg_write_buffer_desc
++ 
++     Describes a write operation into a buffer from CPU memory into
++     a buffer object.
++ 
++     .src
++         Defines the location of the source data in CPU memory.
++         See documentation of the struct `sg_write_buffer_source` for details.
++     .dst
++         Defines the destination buffer object and offset into the buffer's
++         memory.
++     .size
++         Number of bytes to be copied. When this is default-zero, the
++         size will be taken from .src.data.size instead.
++/
+extern(C) struct WriteBufferDesc {
+    WriteBufferSource src = {};
+    BufferLocation dst = {};
+    size_t size = 0;
 }
 /++
 + sg_image_desc
@@ -1941,6 +2094,10 @@ extern(C) struct TraceHooks {
     extern(C) void function(Buffer, const Range*, void*) update_buffer = null;
     extern(C) void function(Image, const ImageData*, void*) update_image = null;
     extern(C) void function(Buffer, const Range*, int, void*) append_buffer = null;
+    extern(C) void function(const WriteBufferDesc*, void*) write_buffer_unsealed = null;
+    extern(C) void function(const WriteImageDesc*, void*) write_image_unsealed = null;
+    extern(C) void function(Buffer, void*) seal_buffer = null;
+    extern(C) void function(Image, void*) seal_image = null;
     extern(C) void function(const Pass*, void*) begin_pass = null;
     extern(C) void function(int, int, int, int, bool, void*) apply_viewport = null;
     extern(C) void function(int, int, int, int, bool, void*) apply_scissor_rect = null;
@@ -2228,6 +2385,10 @@ extern(C) struct FrameStats {
     uint num_update_buffer = 0;
     uint num_append_buffer = 0;
     uint num_update_image = 0;
+    uint num_write_buffer_unsealed = 0;
+    uint num_write_image_unsealed = 0;
+    uint num_seal_buffer = 0;
+    uint num_seal_image = 0;
     uint size_apply_uniforms = 0;
     uint size_update_buffer = 0;
     uint size_append_buffer = 0;
@@ -2348,6 +2509,7 @@ enum LogItem {
     Vulkan_staging_allocate_memory_failed,
     Vulkan_staging_bind_buffer_memory_failed,
     Vulkan_staging_stream_buffer_overflow,
+    Vulkan_staging_image_row_pitch_greater_staging_buffer,
     Vulkan_create_shared_buffer_failed,
     Vulkan_allocate_shared_buffer_memory_failed,
     Vulkan_bind_shared_buffer_memory_failed,
@@ -2411,6 +2573,10 @@ enum LogItem {
     Beginpass_too_many_resolve_attachments,
     Beginpass_attachments_alive,
     Draw_without_bindings,
+    Write_buffer_unsealed_buffer_alive,
+    Write_image_unsealed_image_alive,
+    Seal_buffer_alive,
+    Seal_image_alive,
     Shaderdesc_too_many_vertexstage_textures,
     Shaderdesc_too_many_fragmentstage_textures,
     Shaderdesc_too_many_computestage_textures,
@@ -2425,6 +2591,7 @@ enum LogItem {
     Shaderdesc_too_many_computestage_texturesamplerpairs,
     Validate_bufferdesc_canary,
     Validate_bufferdesc_immutable_dynamic_stream,
+    Validate_bufferdesc_unsealed_vs_immutable,
     Validate_bufferdesc_separate_buffer_types,
     Validate_bufferdesc_expect_nonzero_size,
     Validate_bufferdesc_expect_matching_data_size,
@@ -2437,6 +2604,8 @@ enum LogItem {
     Validate_imagedata_data_size,
     Validate_imagedesc_canary,
     Validate_imagedesc_immutable_dynamic_stream,
+    Validate_imagedesc_unsealed_vs_immutable,
+    Validate_imagedesc_unsealed_vs_attachment,
     Validate_imagedesc_attachment_color_depth_stencil,
     Validate_imagedesc_imagetype_2d_numslices,
     Validate_imagedesc_imagetype_cube_numslices,
@@ -2457,9 +2626,12 @@ enum LogItem {
     Validate_imagedesc_attachment_msaa_3d_image,
     Validate_imagedesc_attachment_msaa_cube_image,
     Validate_imagedesc_attachment_msaa_array_image,
+    Validate_imagedesc_storageimage_expect_immutable,
+    Validate_imagedesc_storageimage_expect_no_data,
     Validate_imagedesc_storageimage_pixelformat,
     Validate_imagedesc_storageimage_expect_no_msaa,
     Validate_imagedesc_injected_no_data,
+    Validate_imagedesc_unsealed_no_data,
     Validate_imagedesc_dynamic_no_data,
     Validate_imagedesc_compressed_immutable,
     Validate_samplerdesc_canary,
@@ -2535,7 +2707,8 @@ enum LogItem {
     Validate_viewdesc_unique_viewtype,
     Validate_viewdesc_any_viewtype,
     Validate_viewdesc_resource_alive,
-    Validate_viewdesc_resource_failed,
+    Validate_viewdesc_resource_valid,
+    Validate_viewdesc_image_valid_unsealed,
     Validate_viewdesc_storagebuffer_offset_vs_buffer_size,
     Validate_viewdesc_storagebuffer_offset_multiple_256,
     Validate_viewdesc_storagebuffer_usage,
@@ -2730,6 +2903,32 @@ enum LogItem {
     Validate_appendbuf_update,
     Validate_updimg_usage,
     Validate_updimg_once,
+    Validate_writebufferunsealed_usage,
+    Validate_writebufferunsealed_resourcestate,
+    Validate_writebufferunsealed_src_data_pointer,
+    Validate_writebufferunsealed_src_data_size,
+    Validate_writebufferunsealed_size,
+    Validate_writebufferunsealed_write_overflow,
+    Validate_writebufferunsealed_read_overflow,
+    Validate_writeimageunsealed_usage,
+    Validate_writeimageunsealed_resourcestate,
+    Validate_writeimageunsealed_src_data_pointer,
+    Validate_writeimageunsealed_src_data_size,
+    Validate_writeimageunsealed_bytesperrow,
+    Validate_writeimageunsealed_bytesperslice,
+    Validate_writeimageunsealed_miplevel,
+    Validate_writeimageunsealed_width,
+    Validate_writeimageunsealed_height,
+    Validate_writeimageunsealed_numslices,
+    Validate_writeimageunsealed_read_overflow,
+    Validate_writeimageunsealed_dst_x_range,
+    Validate_writeimageunsealed_dst_y_range,
+    Validate_writeimageunsealed_dst_slice_range,
+    Validate_writeimageunsealed_write_width_overflow,
+    Validate_writeimageunsealed_write_height_overflow,
+    Validate_writeimageunsealed_write_numslices_overflow,
+    Validate_sealbuffer_resourcestate,
+    Validate_sealimage_resourcestate,
     Validation_failed,
 }
 /++
@@ -2995,7 +3194,7 @@ bool removeCommitListener(CommitListener listener) @trusted @nogc nothrow pure {
     return sg_remove_commit_listener(listener);
 }
 /++
-+ resource creation, destruction and updating
++ resource creation and destruction
 +/
 extern(C) Buffer sg_make_buffer(const BufferDesc* desc) @system @nogc nothrow pure;
 Buffer makeBuffer(scope ref BufferDesc desc) @trusted @nogc nothrow pure {
@@ -3044,26 +3243,6 @@ void destroyPipeline(Pipeline pip) @trusted @nogc nothrow pure {
 extern(C) void sg_destroy_view(View view) @system @nogc nothrow pure;
 void destroyView(View view) @trusted @nogc nothrow pure {
     sg_destroy_view(view);
-}
-extern(C) void sg_update_buffer(Buffer buf, const Range* data) @system @nogc nothrow pure;
-void updateBuffer(Buffer buf, scope ref Range data) @trusted @nogc nothrow pure {
-    sg_update_buffer(buf, &data);
-}
-extern(C) void sg_update_image(Image img, const ImageData* data) @system @nogc nothrow pure;
-void updateImage(Image img, scope ref ImageData data) @trusted @nogc nothrow pure {
-    sg_update_image(img, &data);
-}
-extern(C) int sg_append_buffer(Buffer buf, const Range* data) @system @nogc nothrow pure;
-int appendBuffer(Buffer buf, scope ref Range data) @trusted @nogc nothrow pure {
-    return sg_append_buffer(buf, &data);
-}
-extern(C) bool sg_query_buffer_overflow(Buffer buf) @system @nogc nothrow pure;
-bool queryBufferOverflow(Buffer buf) @trusted @nogc nothrow pure {
-    return sg_query_buffer_overflow(buf);
-}
-extern(C) bool sg_query_buffer_will_overflow(Buffer buf, size_t size) @system @nogc nothrow pure;
-bool queryBufferWillOverflow(Buffer buf, size_t size) @trusted @nogc nothrow pure {
-    return sg_query_buffer_will_overflow(buf, size);
 }
 /++
 + render and compute functions
@@ -3119,6 +3298,48 @@ void endPass() @trusted @nogc nothrow pure {
 extern(C) void sg_commit() @system @nogc nothrow pure;
 void commit() @trusted @nogc nothrow pure {
     sg_commit();
+}
+/++
++ resource update functions (wip new resource update api)
++/
+extern(C) void sg_write_buffer_unsealed(const WriteBufferDesc* desc) @system @nogc nothrow pure;
+void writeBufferUnsealed(scope ref WriteBufferDesc desc) @trusted @nogc nothrow pure {
+    sg_write_buffer_unsealed(&desc);
+}
+extern(C) void sg_write_image_unsealed(const WriteImageDesc* desc) @system @nogc nothrow pure;
+void writeImageUnsealed(scope ref WriteImageDesc desc) @trusted @nogc nothrow pure {
+    sg_write_image_unsealed(&desc);
+}
+extern(C) void sg_seal_buffer(Buffer buf) @system @nogc nothrow pure;
+void sealBuffer(Buffer buf) @trusted @nogc nothrow pure {
+    sg_seal_buffer(buf);
+}
+extern(C) void sg_seal_image(Image img) @system @nogc nothrow pure;
+void sealImage(Image img) @trusted @nogc nothrow pure {
+    sg_seal_image(img);
+}
+/++
++ update functions (will be deprecated by new resource update functions)
++/
+extern(C) void sg_update_buffer(Buffer buf, const Range* data) @system @nogc nothrow pure;
+void updateBuffer(Buffer buf, scope ref Range data) @trusted @nogc nothrow pure {
+    sg_update_buffer(buf, &data);
+}
+extern(C) void sg_update_image(Image img, const ImageData* data) @system @nogc nothrow pure;
+void updateImage(Image img, scope ref ImageData data) @trusted @nogc nothrow pure {
+    sg_update_image(img, &data);
+}
+extern(C) int sg_append_buffer(Buffer buf, const Range* data) @system @nogc nothrow pure;
+int appendBuffer(Buffer buf, scope ref Range data) @trusted @nogc nothrow pure {
+    return sg_append_buffer(buf, &data);
+}
+extern(C) bool sg_query_buffer_overflow(Buffer buf) @system @nogc nothrow pure;
+bool queryBufferOverflow(Buffer buf) @trusted @nogc nothrow pure {
+    return sg_query_buffer_overflow(buf);
+}
+extern(C) bool sg_query_buffer_will_overflow(Buffer buf, size_t size) @system @nogc nothrow pure;
+bool queryBufferWillOverflow(Buffer buf, size_t size) @trusted @nogc nothrow pure {
+    return sg_query_buffer_will_overflow(buf, size);
 }
 /++
 + getting information
