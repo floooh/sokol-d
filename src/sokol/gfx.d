@@ -1146,25 +1146,27 @@ extern(C) struct Bindings {
 +     .immutable (default: true)
 +         the buffer content will never be updated from the CPU side while
 +         in 'valid' resource state (but may be written to by a compute shader)
-+     .dynamic_update (default: false)
-+         the buffer content will be infrequently updated from the CPU side
-+     .stream_update (default: false)
-+         the buffer content will be updated each frame from the CPU side
 +     .write_unsealed (default: false)
 +         when true, creates an immutable buffer in 'unsealed' resource state,
 +         unsealed buffers can be populated with data by one or multiple
 +         `sg_write_buffer_unsealed()` calls before being 'sealed' by
 +         calling `sg_seal_buffer()` which transitions from 'unsealed'
 +         to 'valid' resource state
++     .write_transient (default: false)
++         TODO: docs
++     .dynamic_update (default: false)
++         the buffer content will be infrequently updated from the CPU side
++     .stream_update (deprecated, default: false)
++         the buffer content will be updated each frame from the CPU side
 +/
 extern(C) struct BufferUsage {
     bool vertex_buffer = false;
     bool index_buffer = false;
     bool storage_buffer = false;
     bool _immutable = false;
-    bool dynamic_update = false;
-    bool stream_update = false;
     bool write_unsealed = false;
+    bool write_transient = false;
+    bool dynamic_update = false;
 }
 /++
 + sg_buffer_desc
@@ -1258,16 +1260,16 @@ extern(C) struct BufferDesc {
 +     .immutable (default: true)
 +         the image content cannot be updated from the CPU side
 +         (but may be updated by the GPU in a render- or compute-pass)
-+     .dynamic_update (default: false)
-+         the image content is updated infrequently by the CPU via sg_update_image()
-+     .stream_update (default: false)
-+         the image content is updated each frame by the CPU via sg_update_image()
 +     .write_unsealed (default: false)
 +         when true, creates an immutable image in 'unsealed' resource state,
 +         unsealed images can be populated with data by one or multiple
 +         `sg_write_image_unsealed()` calls before being 'sealed' by
 +         calling `sg_seal_image()` which transitions from 'unsealed'
 +         to 'valid' resource state
++     .write_transient (default: false)
++         TODO: docs
++     .dynamic_update (default: false)
++         the image content is updated infrequently by the CPU via sg_update_image()
 + 
 +     Note that creating a texture view from the image to be used for
 +     texture-sampling in vertex-, fragment- or compute-shaders
@@ -1279,9 +1281,9 @@ extern(C) struct ImageUsage {
     bool resolve_attachment = false;
     bool depth_stencil_attachment = false;
     bool _immutable = false;
-    bool dynamic_update = false;
-    bool stream_update = false;
     bool write_unsealed = false;
+    bool write_transient = false;
+    bool dynamic_update = false;
 }
 /++
 + sg_view_type
@@ -2094,6 +2096,8 @@ extern(C) struct TraceHooks {
     extern(C) void function(Buffer, const Range*, void*) update_buffer = null;
     extern(C) void function(Image, const ImageData*, void*) update_image = null;
     extern(C) void function(Buffer, const Range*, int, void*) append_buffer = null;
+    extern(C) void function(const WriteBufferDesc*, void*) write_buffer_transient = null;
+    extern(C) void function(const WriteImageDesc*, void*) write_image_transient = null;
     extern(C) void function(const WriteBufferDesc*, void*) write_buffer_unsealed = null;
     extern(C) void function(const WriteImageDesc*, void*) write_image_unsealed = null;
     extern(C) void function(Buffer, void*) seal_buffer = null;
@@ -2385,6 +2389,8 @@ extern(C) struct FrameStats {
     uint num_update_buffer = 0;
     uint num_append_buffer = 0;
     uint num_update_image = 0;
+    uint num_write_buffer_transient = 0;
+    uint num_write_image_transient = 0;
     uint num_write_buffer_unsealed = 0;
     uint num_write_image_unsealed = 0;
     uint num_seal_buffer = 0;
@@ -2463,6 +2469,7 @@ enum LogItem {
     D3d11_map_for_update_buffer_failed,
     D3d11_map_for_append_buffer_failed,
     D3d11_map_for_update_image_failed,
+    D3d11_map_for_write_buffer_transient_failed,
     Metal_create_buffer_failed,
     Metal_texture_format_not_supported,
     Metal_create_texture_failed,
@@ -2573,6 +2580,8 @@ enum LogItem {
     Beginpass_too_many_resolve_attachments,
     Beginpass_attachments_alive,
     Draw_without_bindings,
+    Write_buffer_transient_buffer_alive,
+    Write_image_transient_image_alive,
     Write_buffer_unsealed_buffer_alive,
     Write_image_unsealed_image_alive,
     Seal_buffer_alive,
@@ -2590,7 +2599,7 @@ enum LogItem {
     Shaderdesc_too_many_fragmentstage_texturesamplerpairs,
     Shaderdesc_too_many_computestage_texturesamplerpairs,
     Validate_bufferdesc_canary,
-    Validate_bufferdesc_immutable_dynamic_stream,
+    Validate_bufferdesc_immutable_vs_writable,
     Validate_bufferdesc_unsealed_vs_immutable,
     Validate_bufferdesc_separate_buffer_types,
     Validate_bufferdesc_expect_nonzero_size,
@@ -2603,9 +2612,10 @@ enum LogItem {
     Validate_imagedata_nodata,
     Validate_imagedata_data_size,
     Validate_imagedesc_canary,
-    Validate_imagedesc_immutable_dynamic_stream,
-    Validate_imagedesc_unsealed_vs_immutable,
-    Validate_imagedesc_unsealed_vs_attachment,
+    Validate_imagedesc_immutable_vs_writable,
+    Validate_imagedesc_write_unsealed_vs_immutable,
+    Validate_imagedesc_write_unsealed_vs_attachment,
+    Validate_imagedesc_write_transient_vs_attachment,
     Validate_imagedesc_attachment_color_depth_stencil,
     Validate_imagedesc_imagetype_2d_numslices,
     Validate_imagedesc_imagetype_cube_numslices,
@@ -2631,8 +2641,7 @@ enum LogItem {
     Validate_imagedesc_storageimage_pixelformat,
     Validate_imagedesc_storageimage_expect_no_msaa,
     Validate_imagedesc_injected_no_data,
-    Validate_imagedesc_unsealed_no_data,
-    Validate_imagedesc_dynamic_no_data,
+    Validate_imagedesc_writable_no_data,
     Validate_imagedesc_compressed_immutable,
     Validate_samplerdesc_canary,
     Validate_samplerdesc_anistropic_requires_linear_filtering,
@@ -2838,11 +2847,13 @@ enum LogItem {
     Validate_abnd_vbuf_alive,
     Validate_abnd_vbuf_usage,
     Validate_abnd_vbuf_overflow,
+    Validate_abnd_vbuf_write_transient,
     Validate_abnd_expected_no_ibuf,
     Validate_abnd_expected_ibuf,
     Validate_abnd_ibuf_alive,
     Validate_abnd_ibuf_usage,
     Validate_abnd_ibuf_overflow,
+    Validate_abnd_ibuf_write_transient,
     Validate_abnd_expected_view_binding,
     Validate_abnd_view_alive,
     Validate_abnd_expect_texview,
@@ -2853,10 +2864,13 @@ enum LogItem {
     Validate_abnd_texview_expected_non_multisampled_image,
     Validate_abnd_texview_expected_filterable_image,
     Validate_abnd_texview_expected_depth_image,
+    Validate_abnd_texview_image_write_transient,
     Validate_abnd_sbview_readwrite_immutable,
+    Validate_abnd_sbview_buffer_write_transient,
     Validate_abnd_simgview_compute_pass_expected,
     Validate_abnd_simgview_imagetype_mismatch,
     Validate_abnd_simgview_accessformat,
+    Validate_abnd_simgview_image_write_transient,
     Validate_abnd_expected_sampler_binding,
     Validate_abnd_unexpected_sampler_compare_never,
     Validate_abnd_expected_sampler_compare_never,
@@ -2905,28 +2919,33 @@ enum LogItem {
     Validate_updimg_once,
     Validate_writebufferunsealed_usage,
     Validate_writebufferunsealed_resourcestate,
-    Validate_writebufferunsealed_src_data_pointer,
-    Validate_writebufferunsealed_src_data_size,
-    Validate_writebufferunsealed_size,
-    Validate_writebufferunsealed_write_overflow,
-    Validate_writebufferunsealed_read_overflow,
+    Validate_writebuffertransient_usage,
+    Validate_writebuffertransient_write_before_bind,
+    Validate_writebuffertransient_dst_offset_alignment,
+    Validate_writebuffer_src_data_pointer,
+    Validate_writebuffer_src_data_size,
+    Validate_writebuffer_size,
+    Validate_writebuffer_write_overflow,
+    Validate_writebuffer_read_overflow,
     Validate_writeimageunsealed_usage,
     Validate_writeimageunsealed_resourcestate,
-    Validate_writeimageunsealed_src_data_pointer,
-    Validate_writeimageunsealed_src_data_size,
-    Validate_writeimageunsealed_bytesperrow,
-    Validate_writeimageunsealed_bytesperslice,
-    Validate_writeimageunsealed_miplevel,
-    Validate_writeimageunsealed_width,
-    Validate_writeimageunsealed_height,
-    Validate_writeimageunsealed_numslices,
-    Validate_writeimageunsealed_read_overflow,
-    Validate_writeimageunsealed_dst_x_range,
-    Validate_writeimageunsealed_dst_y_range,
-    Validate_writeimageunsealed_dst_slice_range,
-    Validate_writeimageunsealed_write_width_overflow,
-    Validate_writeimageunsealed_write_height_overflow,
-    Validate_writeimageunsealed_write_numslices_overflow,
+    Validate_writeimagetransient_usage,
+    Validate_writeimagetransient_write_before_bind,
+    Validate_writeimage_src_data_pointer,
+    Validate_writeimage_src_data_size,
+    Validate_writeimage_bytesperrow,
+    Validate_writeimage_bytesperslice,
+    Validate_writeimage_miplevel,
+    Validate_writeimage_width,
+    Validate_writeimage_height,
+    Validate_writeimage_numslices,
+    Validate_writeimage_read_overflow,
+    Validate_writeimage_dst_x_range,
+    Validate_writeimage_dst_y_range,
+    Validate_writeimage_dst_slice_range,
+    Validate_writeimage_write_width_overflow,
+    Validate_writeimage_write_height_overflow,
+    Validate_writeimage_write_numslices_overflow,
     Validate_sealbuffer_resourcestate,
     Validate_sealimage_resourcestate,
     Validation_failed,
@@ -3302,6 +3321,14 @@ void commit() @trusted @nogc nothrow pure {
 /++
 + resource update functions (wip new resource update api)
 +/
+extern(C) void sg_write_buffer_transient(const WriteBufferDesc* desc) @system @nogc nothrow pure;
+void writeBufferTransient(scope ref WriteBufferDesc desc) @trusted @nogc nothrow pure {
+    sg_write_buffer_transient(&desc);
+}
+extern(C) void sg_write_image_transient(const WriteImageDesc* desc) @system @nogc nothrow pure;
+void writeImageTransient(scope ref WriteImageDesc desc) @trusted @nogc nothrow pure {
+    sg_write_image_transient(&desc);
+}
 extern(C) void sg_write_buffer_unsealed(const WriteBufferDesc* desc) @system @nogc nothrow pure;
 void writeBufferUnsealed(scope ref WriteBufferDesc desc) @trusted @nogc nothrow pure {
     sg_write_buffer_unsealed(&desc);
