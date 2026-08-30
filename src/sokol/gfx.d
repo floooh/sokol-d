@@ -140,7 +140,7 @@ enum Backend {
 + 
 +     The default pixel format for texture images is SG_PIXELFORMAT_RGBA8.
 + 
-+     The default pixel format for render target images is platform-dependent
++     The default pixel format for pass attachment images is platform-dependent
 +     and taken from the sg_environment struct passed into sg_setup(). Typically
 +     the default formats are:
 + 
@@ -1153,11 +1153,15 @@ extern(C) struct Bindings {
 +         calling `sg_seal_buffer()` which transitions from 'unsealed'
 +         to 'valid' resource state
 +     .write_transient (default: false)
-+         TODO: docs
++         the buffer is going to be used as destination in
++         sg_write_buffer_transient() calls, write-transient buffers are used for
++         scenarios where data that's written from the CPU side is consumed in the
++         same frame by the GPU-side and doesn't need to survive into the next
++         frame
 +     .dynamic_update (default: false)
 +         the buffer content will be infrequently updated from the CPU side
-+     .stream_update (deprecated, default: false)
-+         the buffer content will be updated each frame from the CPU side
++         NOTE: dynamic_update is deprecated and will be replaced with a
++         .write_persistent flag in one of the next updates
 +/
 extern(C) struct BufferUsage {
     bool vertex_buffer = false;
@@ -1185,17 +1189,14 @@ extern(C) struct BufferUsage {
 +     keep the .size item zero-initialized, and set the size together with the
 +     pointer to the initial data in the .data item.
 + 
-+     For immutable or mutable buffers without initial data, keep the .data item
-+     zero-initialized, and set the buffer size in the .size item instead.
++     For buffers without initial data, keep the .data item zero-initialized, and
++     set the buffer size in the .size item instead.
 + 
-+     You can also set both size values, but currently both size values must
-+     be identical (this may change in the future when the dynamic resource
-+     management may become more flexible).
++     You can also set both size values, but both size values must
++     be identical.
 + 
-+     NOTE: Immutable buffers without storage-buffer-usage *must* be created
-+     with initial content, this restriction doesn't apply to storage buffer usage,
-+     because storage buffers may also get their initial content by running
-+     a compute shader on them.
++     NOTE: Immutable buffers that are neither storage-buffers or have
++     write-unsealed usage *must* be created with initial data.
 + 
 +     NOTE: Buffers without initial data will have undefined content, e.g.
 +     do *not* expect the buffer to be zero-initialized!
@@ -1208,12 +1209,13 @@ extern(C) struct BufferUsage {
 +     .gl_buffers[SG_NUM_INFLIGHT_FRAMES]
 +     .mtl_buffers[SG_NUM_INFLIGHT_FRAMES]
 +     .d3d11_buffer
++     .wgpu_buffer
 + 
 +     You must still provide all other struct items except the .data item, and
 +     these must match the creation parameters of the native buffers you provide.
 +     For sg_buffer_desc.usage.immutable buffers, only provide a single native
 +     3D-API buffer, otherwise you need to provide SG_NUM_INFLIGHT_FRAMES buffers
-+     (only for GL and Metal, not D3D11). Providing multiple buffers for GL and
++     (only for GL and Metal, not D3D11 or WebGPU). Providing multiple buffers for GL and
 +     Metal is necessary because sokol_gfx will rotate through them when calling
 +     sg_update_buffer() to prevent lock-stalls.
 + 
@@ -1267,9 +1269,15 @@ extern(C) struct BufferDesc {
 +         calling `sg_seal_image()` which transitions from 'unsealed'
 +         to 'valid' resource state
 +     .write_transient (default: false)
-+         TODO: docs
++         the image is going to be used as destination in
++         sg_write_image_transient() calls, write-transient images are used for
++         scenarios where data that's written from the CPU side is consumed in the
++         same frame by the GPU-side and doesn't need to survive into the next
++         frame
 +     .dynamic_update (default: false)
 +         the image content is updated infrequently by the CPU via sg_update_image()
++         NOTE: dynamic_update is deprecated and will be replaced with a
++         .write_persistent flag in one of the next updates
 + 
 +     Note that creating a texture view from the image to be used for
 +     texture-sampling in vertex-, fragment- or compute-shaders
@@ -1363,7 +1371,7 @@ extern(C) struct ImageLocation {
 +     Describes the data to be written from CPU memory into an image:
 + 
 +     .data
-+         Pointer to and size of the data in CPU memory
++         Pointer to and size (in bytes) of the data in CPU memory
 +     .offset
 +         Optional offset that's added to data.ptr
 +     .bytes_per_row
@@ -1379,6 +1387,10 @@ extern(C) struct ImageLocation {
 +         slices, can be left zero-initialized when the image data is tightly
 +         packed (e.g. no gaps between slices). Must be a multiple of
 +         .bytes_per_row
++ 
++     NOTE: use the helper functions sg_query_row_pitch() and sg_query_surface_pitch()
++     to compute values compatible with the .bytes_per_row and .bytes_per_slice
++     restrictions.
 +/
 extern(C) struct WriteImageSource {
     Range data = {};
@@ -1390,7 +1402,7 @@ extern(C) struct WriteImageSource {
 + sg_write_image_desc
 + 
 +     Describes a write operation into a single mipmap from CPU memory into
-+     an image object.
++     an image object. Parameter of the sg_write_image_*() functions.
 + 
 +     .src
 +         Defines the location and layout of the source data in CPU memory.
@@ -1412,7 +1424,7 @@ extern(C) struct WriteImageSource {
 +     .src.bytes_per_slice
 +         Same as above, default-zero indicates that the source data is layed
 +         out as a tightly packed complete mip-map (e.g. when writing data into
-+         miplevel 0 of a 256x256 image, .src.bytes_per_slice will be 256*1024).
++         miplevel 0 of a 256x256 image, .src.bytes_per_slice will be 256*256*4).
 +     .size.width, .size.height, .size.num_slices
 +         Default-zero means 'the remaining width, height and num_slices' taking
 +         .dst.x/y/slice into account. E.g. when .dst.x/y/num_slices are all zero,
@@ -1428,6 +1440,8 @@ extern(C) struct WriteImageDesc {
 + sg_buffer_location
 + 
 +     Describes the source or destination location in a buffer.
++ 
++     NOTE: .offset must be 4-byte aligned (ensured by the validation layer)
 +/
 extern(C) struct BufferLocation {
     Buffer buffer = {};
@@ -1436,7 +1450,7 @@ extern(C) struct BufferLocation {
 /++
 + sg_write_buffer_source
 + 
-+     Describes the data to be written from CPU memory into a buffer.
++     Describes the CPU-side source data to be written into a buffer.
 + 
 +     .data
 +         Pointer to and size of the data in CPU memory
@@ -1451,7 +1465,7 @@ extern(C) struct WriteBufferSource {
 + sg_write_buffer_desc
 + 
 +     Describes a write operation into a buffer from CPU memory into
-+     a buffer object.
++     a buffer object. Parameter of the sg_write_buffer_*() functions.
 + 
 +     .src
 +         Defines the location of the source data in CPU memory.
@@ -2176,18 +2190,18 @@ extern(C) struct SlotInfo {
 }
 extern(C) struct BufferInfo {
     SlotInfo slot = {};
+    int num_slots = 0;
+    int active_slot = 0;
     uint update_frame_index = 0;
     uint append_frame_index = 0;
     int append_pos = 0;
     bool append_overflow = false;
-    int num_slots = 0;
-    int active_slot = 0;
 }
 extern(C) struct ImageInfo {
     SlotInfo slot = {};
-    uint upd_frame_index = 0;
     int num_slots = 0;
     int active_slot = 0;
+    uint upd_frame_index = 0;
 }
 extern(C) struct SamplerInfo {
     SlotInfo slot = {};
@@ -2515,7 +2529,7 @@ enum LogItem {
     Vulkan_staging_create_buffer_failed,
     Vulkan_staging_allocate_memory_failed,
     Vulkan_staging_bind_buffer_memory_failed,
-    Vulkan_staging_stream_buffer_overflow,
+    Vulkan_staging_transient_buffer_overflow,
     Vulkan_staging_image_row_pitch_greater_staging_buffer,
     Vulkan_create_shared_buffer_failed,
     Vulkan_allocate_shared_buffer_memory_failed,
@@ -2616,6 +2630,7 @@ enum LogItem {
     Validate_imagedesc_write_unsealed_vs_immutable,
     Validate_imagedesc_write_unsealed_vs_attachment,
     Validate_imagedesc_write_transient_vs_attachment,
+    Validate_imagedesc_dynamic_update_vs_attachment,
     Validate_imagedesc_attachment_color_depth_stencil,
     Validate_imagedesc_imagetype_2d_numslices,
     Validate_imagedesc_imagetype_cube_numslices,
@@ -2972,7 +2987,7 @@ enum LogItem {
 +     .wgpu.disable_bindgroups_cache      false
 +     .wgpu.bindgroups_cache_size         1024
 +     .vulkan.copy_staging_buffer_size    4 MB
-+     .vulkan.stream_staging_buffer_size  16 MB
++     .vulkan.transient_staging_buffer_size  16 MB
 +     .vulkan.descriptor_buffer_size      16 MB
 + 
 +     .allocator.alloc_fn     0 (in this case, malloc() will be called)
@@ -3044,13 +3059,13 @@ enum LogItem {
 +             .usage.dynamic_update resources. The default is 4 MB,
 +             bigger resource updates are split into multiple chunks
 +             of the staging buffer size
-+         .vulkan.stream_staging_buffer_size
-+             Size of the staging buffer in bytes for updating .usage.stream_update
++         .vulkan.transient_staging_buffer_size
++             Size of the staging buffer in bytes for updating .usage.write_transient
 +             resources. The default is 16 MB. The size must be big enough
-+             to accomodate all update into .usage.stream_update resources.
++             to accomodate all writes into .usage.write_transient resources.
 +             Any additional data will cause an error log message and
 +             incomplete rendering. Note that the actually allocated size
-+             will be twice as much because the stream-staging-buffer is
++             will be twice as much because the transient-staging-buffer is
 +             double-buffered.
 +         .vulkan.descriptor_buffer_size
 +             Size of the descriptor-upload buffer in bytes. The default
@@ -3149,7 +3164,7 @@ extern(C) struct WgpuDesc {
 }
 extern(C) struct VulkanDesc {
     int copy_staging_buffer_size = 0;
-    int stream_staging_buffer_size = 0;
+    int transient_staging_buffer_size = 0;
     int descriptor_buffer_size = 0;
 }
 extern(C) struct Desc {
