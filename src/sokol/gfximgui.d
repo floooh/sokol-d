@@ -7,8 +7,6 @@
 +     Do not edit manually; regenerate using gen_d.py.
 +/
 module sokol.gfximgui;
-import sg = sokol.gfx;
-import sapp = sokol.app;
 
 /++
 + sgimgui_allocator_t
