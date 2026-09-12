@@ -12,21 +12,7 @@ import sapp = sokol.app;
 
 enum LogItem {
     Ok,
-    Malloc_failed,
     Buffer_overflow,
-}
-/++
-+ simgui_allocator_t
-+ 
-+     Used in simgui_desc_t to provide custom memory-alloc and -free functions
-+     to sokol_imgui.h. If memory management should be overridden, both the
-+     alloc_fn and free_fn function must be provided (e.g. it's not valid to
-+     override one function but not the other).
-+/
-extern(C) struct Allocator {
-    extern(C) void* function(size_t, void*) alloc_fn = null;
-    extern(C) void function(void*, void*) free_fn = null;
-    void* user_data = null;
 }
 /++
 + simgui_logger
@@ -53,7 +39,6 @@ extern(C) struct Desc {
     bool disable_set_mouse_cursor = false;
     bool disable_windows_resize_from_edges = false;
     bool write_alpha_channel = false;
-    Allocator allocator = {};
     Logger logger = {};
 }
 extern(C) struct FrameDesc {
