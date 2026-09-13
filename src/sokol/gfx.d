@@ -2727,6 +2727,7 @@ enum LogItem {
     Validate_pipelinedesc_dual_source_blending_not_supported,
     Validate_pipelinedesc_depth_format_none_but_depth_write_enabled,
     Validate_pipelinedesc_depth_format_none_compare_func_mismatch,
+    Validate_pipelinedesc_color_count,
     Validate_viewdesc_canary,
     Validate_viewdesc_unique_viewtype,
     Validate_viewdesc_any_viewtype,
