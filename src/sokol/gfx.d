@@ -2502,6 +2502,7 @@ enum LogItem {
     Metal_create_rps_failed,
     Metal_create_rps_output,
     Metal_create_dss_failed,
+    Metal_create_textureview_failed,
     Wgpu_bindgroups_pool_exhausted,
     Wgpu_bindgroupscache_size_greater_one,
     Wgpu_bindgroupscache_size_pow2,
