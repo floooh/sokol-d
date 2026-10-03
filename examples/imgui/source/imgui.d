@@ -80,9 +80,10 @@ void frame() @trusted
     sappimgui.draw;
     /*=== UI CODE ENDS HERE ===*/
 
+    simgui.flush;
     sg.Pass pass = {action: state.pass_action, swapchain: sgapp.swapchain};
     sg.beginPass(pass);
-    simgui.render;
+    simgui.draw;
     sg.endPass;
     sg.commit;
 }
