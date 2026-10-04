@@ -249,6 +249,8 @@ extern(C) struct Features {
     bool draw_base_instance = false;
     bool dual_source_blending = false;
     bool vertexformat_int10_n2 = false;
+    bool copy_buffer_to_image_relaxed_buffer_type = false;
+    bool copy_buffer_to_image_relaxed_bytes_per_row = false;
     bool gl_texture_views = false;
 }
 /++
@@ -1037,6 +1039,17 @@ extern(C) struct Pass {
     uint _end_canary = 0;
 }
 /++
++ sg_pass_state
++ 
++     Result of sg_query_pass_state().
++/
+enum PassState {
+    None,
+    Render,
+    Compute,
+    Num,
+}
+/++
 + sg_bindings
 + 
 +     The sg_bindings structure defines the resource bindings for
@@ -1143,9 +1156,15 @@ extern(C) struct Bindings {
 +     .storage_buffer (default: false)
 +         the buffer will be bound as storage buffer via storage-buffer-view
 +         in sg_bindings.views[]
-+     .immutable (default: true)
-+         the buffer content will never be updated from the CPU side while
-+         in 'valid' resource state (but may be written to by a compute shader)
++     .staging_buffer (default: false)
++         the buffer cannot be bound as rendering or compute resource and
++         can only be used as copy source, used together with .write_transient
++         for uploading CPU data into GPU buffers or images via a combination
++         of `sg_write_buffer_transient()` followed by `sg_copy_buffer_to_buffer()`
++         or `sg_copy_buffer_to_image()`
++     .staging_index_buffer (default: false)
++         special staging buffer type for WebGL2 for copying data into index
++         buffers (in WebGL2 such copies are only allowed between index buffers)
 +     .write_unsealed (default: false)
 +         when true, creates an immutable buffer in 'unsealed' resource state,
 +         unsealed buffers can be populated with data by one or multiple
@@ -1158,19 +1177,22 @@ extern(C) struct Bindings {
 +         scenarios where data that's written from the CPU side is consumed in the
 +         same frame by the GPU-side and doesn't need to survive into the next
 +         frame
-+     .dynamic_update (default: false)
-+         the buffer content will be infrequently updated from the CPU side
-+         NOTE: dynamic_update is deprecated and will be replaced with a
-+         .write_persistent flag in one of the next updates
++     .copy_src (default: false)
++         the buffer is used as source in a sg_copy_buffer_to_buffer()
++         or sg_copy_buffer_to_image() call
++     .copy_dst (default: false)
++         the buffer is used as destination in an sg_copy_buffer_to_buffer() call
 +/
 extern(C) struct BufferUsage {
     bool vertex_buffer = false;
     bool index_buffer = false;
     bool storage_buffer = false;
-    bool _immutable = false;
+    bool staging_buffer = false;
+    bool staging_index_buffer = false;
     bool write_unsealed = false;
     bool write_transient = false;
-    bool dynamic_update = false;
+    bool copy_src = false;
+    bool copy_dst = false;
 }
 /++
 + sg_buffer_desc
@@ -1180,9 +1202,9 @@ extern(C) struct BufferUsage {
 +     The default configuration is:
 + 
 +     .size:      0       (*must* be >0 for buffers without data)
-+     .usage      { .vertex_buffer = true, .immutable = true }
-+     .data.ptr   0       (*must* be valid for immutable buffers without storage buffer usage)
-+     .data.size  0       (*must* be > 0 for immutable buffers without storage buffer usage)
++     .usage      { .vertex_buffer = true }
++     .data.ptr   0
++     .data.size  0
 +     .label      0       (optional string label)
 + 
 +     For immutable buffers which are initialized with initial data,
@@ -1195,9 +1217,6 @@ extern(C) struct BufferUsage {
 +     You can also set both size values, but both size values must
 +     be identical.
 + 
-+     NOTE: Immutable buffers that are neither storage-buffers or have
-+     write-unsealed usage *must* be created with initial data.
-+ 
 +     NOTE: Buffers without initial data will have undefined content, e.g.
 +     do *not* expect the buffer to be zero-initialized!
 + 
@@ -1206,20 +1225,15 @@ extern(C) struct BufferUsage {
 +     The following struct members allow to inject your own GL, Metal
 +     or D3D11 buffers into sokol_gfx:
 + 
-+     .gl_buffers[SG_NUM_INFLIGHT_FRAMES]
-+     .mtl_buffers[SG_NUM_INFLIGHT_FRAMES]
++     .gl_buffer
++     .mtl_buffer
 +     .d3d11_buffer
 +     .wgpu_buffer
 + 
 +     You must still provide all other struct items except the .data item, and
 +     these must match the creation parameters of the native buffers you provide.
-+     For sg_buffer_desc.usage.immutable buffers, only provide a single native
-+     3D-API buffer, otherwise you need to provide SG_NUM_INFLIGHT_FRAMES buffers
-+     (only for GL and Metal, not D3D11 or WebGPU). Providing multiple buffers for GL and
-+     Metal is necessary because sokol_gfx will rotate through them when calling
-+     sg_update_buffer() to prevent lock-stalls.
 + 
-+     Note that it is expected that immutable injected buffer have already been
++     Note that it is expected that injected buffer have already been
 +     initialized with content, and the .content member must be 0!
 + 
 +     Also you need to call sg_reset_state_cache() after calling native 3D-API
@@ -1231,8 +1245,8 @@ extern(C) struct BufferDesc {
     BufferUsage usage = {};
     Range data = {};
     const(char)* label = null;
-    uint[2] gl_buffers = [0, 0];
-    const(void)*[2] mtl_buffers = null;
+    uint gl_buffer = 0;
+    const(void)* mtl_buffer = null;
     const(void)* d3d11_buffer = null;
     const(void)* wgpu_buffer = null;
     uint _end_canary = 0;
@@ -1259,9 +1273,6 @@ extern(C) struct BufferDesc {
 +         the image can be used as parent resource of a depth-stencil-attachmnet-view
 +         which is then passes into sg_begin_pass via sg_pass.attachments.depth_stencil
 +         as depth-stencil-buffer
-+     .immutable (default: true)
-+         the image content cannot be updated from the CPU side
-+         (but may be updated by the GPU in a render- or compute-pass)
 +     .write_unsealed (default: false)
 +         when true, creates an immutable image in 'unsealed' resource state,
 +         unsealed images can be populated with data by one or multiple
@@ -1274,10 +1285,15 @@ extern(C) struct BufferDesc {
 +         scenarios where data that's written from the CPU side is consumed in the
 +         same frame by the GPU-side and doesn't need to survive into the next
 +         frame
-+     .dynamic_update (default: false)
-+         the image content is updated infrequently by the CPU via sg_update_image()
-+         NOTE: dynamic_update is deprecated and will be replaced with a
-+         .write_persistent flag in one of the next updates
++     .copy_src (default: false)
++         TODO: currently unused, will become useful when the rest of the
++         sg_copy_* functions are implemented
++     .copy_dst (default: false)
++         the image is going to be used as destination in an `sg_copy_buffer_to_image()`
++         call
++     .immutable (default: true, deprecated)
++         the image content cannot be updated from the CPU side
++         (but may be updated by the GPU in a render- or compute-pass)
 + 
 +     Note that creating a texture view from the image to be used for
 +     texture-sampling in vertex-, fragment- or compute-shaders
@@ -1288,10 +1304,11 @@ extern(C) struct ImageUsage {
     bool color_attachment = false;
     bool resolve_attachment = false;
     bool depth_stencil_attachment = false;
-    bool _immutable = false;
     bool write_unsealed = false;
     bool write_transient = false;
-    bool dynamic_update = false;
+    bool copy_src = false;
+    bool copy_dst = false;
+    bool _immutable = false;
 }
 /++
 + sg_view_type
@@ -1441,11 +1458,30 @@ extern(C) struct WriteImageDesc {
 + 
 +     Describes the source or destination location in a buffer.
 + 
-+     NOTE: .offset must be 4-byte aligned (ensured by the validation layer)
++     Caveats:
++         - .offset must be 4-byte aligned (ensured by the validation layer)
 +/
 extern(C) struct BufferLocation {
     Buffer buffer = {};
     size_t offset = 0;
+}
+/++
++ sg_buffer_image_location
++ 
++     A buffer location for image data with row- and surface-pitch.
++ 
++     Caveats (all checked by the validation layer):
++         - .offset must be a multiple of the destination image pixel- or
++           compression-block size
++         - .bytes_per_row must be a multiple of the destination image's
++           per-pixel or per-compression-block size
++         - .bytes_per_slice must be a multiple of .bytes_per_row
++/
+extern(C) struct BufferImageLocation {
+    Buffer buffer = {};
+    size_t offset = 0;
+    int bytes_per_row = 0;
+    int bytes_per_slice = 0;
 }
 /++
 + sg_write_buffer_source
@@ -1481,6 +1517,103 @@ extern(C) struct WriteBufferDesc {
     WriteBufferSource src = {};
     BufferLocation dst = {};
     size_t size = 0;
+}
+/++
++ sg_copy_buffer_to_buffer_desc
++ 
++     Describes a buffer-to-buffer copy operation via sg_copy_buffer_to_buffer()
++ 
++     .src
++         .buffer     the source buffer
++         .offset     byte offset into the source buffer
++     .dst
++         .buffer     the destination buffer
++         .offset     byte offset into the destination buffer
++     .size           number of bytes to copy (must be > 0)
++ 
++     Caveats (all checked by the validation layer):
++         - sg_copy_buffer_to_buffer() must be called outside a pass
++         - the source buffer must have been created with .usage.copy_src
++         - the destination buffer must have been created with .usage.copy_dst
++         - the source and destination buffer cannot be identical
++         - src and dst offset must be 4-byte aligned
++         - WebGL2 specific: when copying into an index buffer, the source
++           buffer must have been created with .usage.index_buffer or
++           .usage.staging_index_buffer (this requirement can be checked
++           via `sg_query_features().separate_buffer_types`)
++/
+extern(C) struct CopyBufferToBufferDesc {
+    BufferLocation src = {};
+    BufferLocation dst = {};
+    size_t size = 0;
+}
+/++
++ sg_copy_buffer_to_image_desc
++ 
++     Describes a buffer-to-image copy operation via sg_copy_buffer_to_image():
++ 
++     .src
++         .buffer             the source buffer
++         .offset             offset into the buffer
++         .bytes_per_row      row pitch in bytes of the source data (default: see below)
++         .bytes_per_slice    slice pitch in bytes of the source data (default: see below)
++     .dst
++         .image              the destination image
++         .mip_level          the mip level to copy to
++         .x, .y              destination [x,y] coordinate
++         .slice              destination array or 3d slice
++     .size
++         .width              copy region width in pixels
++         .height             copy region height in pixels
++         .num_slices         number of array or 3d slices to copy
++ 
++     Note on default values:
++ 
++         The default values are the same as sg_write_image_desc, which may
++         be a bit unintuitive for a copy operation. TL;DR: the defaults
++         are for copying a whole, tightly packed mip level into the
++         destination image:
++ 
++         .src.bytes_per_row
++             Default is the row pitch of the selected destination image miplevel
++             (e.g. *not* computed from the copy-width)
++         .src.bytes_per_slice
++             Likewise, the default is the slice pitch of the destination image
++             mip level (e.g. *not* computed from the copy width and height)
++         .size
++             The size default is the 'rest after offset' for the destination mip
++             level, e.g.:
++                 .size.width = mip_width - .dst.x
++                 .size.height = mip_height - .dst.y
++                 .size.num_slices = mip_depth_or_slices - .dst.slice
++ 
++     Caveats (all checked by the validation layer or via logged errors and warnings):
++         - sg_copy_buffer_to_image() must be called outside a pass
++         - for compressed image formats, .size.width and .size.height must be
++           a multiple of the compression block size
++         - the source buffer must have been created with .usage.copy_src
++         - the destination image must have been created with .usage.copy_dst
++         - the source buffer type cannot be .usage.staging_index_buffer
++         - the source buffer type cannot be .usage.index_buffer when
++           `sg_query_features().separate_buffer_types` is true (this is a
++            WebGL2 restriction)
++         - only .usage.staging_buffer sources are allowed when
++           `sg_query_features().copy_buffer_to_image_relaxed_buffer_type` is false
++           (this is a D3D11 restriction)
++         - when copying from a *non-staging buffer*, .src.bytes_per_row must be a
++           multiple of 256 when `sg_query_features().copy_buffer_to_image_relaxed_bytes_per_row`
++           is false (this is a WebGPU restriction)
++         - 'fuzzy' GL restriction (this is not currently enforced by the validation layer):
++           when copying into compressed textures, the source data must be tightly packed
++           (e.g. .src.bytes_per_row and .src.bytes_per_slice will be ignored)
++         - on the Apple GL/GLES3 backends, the source buffer offset in `sg_copy_buffer_to_image()`
++           is ignored because of a driver bug, sokol_gfx.h will log a one-time message
++           when the bug would be triggered
++/
+extern(C) struct CopyBufferToImageDesc {
+    BufferImageLocation src = {};
+    ImageLocation dst = {};
+    ImageExtent size = {};
 }
 /++
 + sg_image_desc
@@ -1549,9 +1682,9 @@ extern(C) struct ImageDesc {
     int sample_count = 0;
     ImageData data = {};
     const(char)* label = null;
-    uint[2] gl_textures = [0, 0];
+    uint gl_texture = 0;
     uint gl_texture_target = 0;
-    const(void)*[2] mtl_textures = null;
+    const(void)* mtl_texture = null;
     const(void)* d3d11_texture = null;
     const(void)* wgpu_texture = null;
     uint _end_canary = 0;
@@ -2107,15 +2240,14 @@ extern(C) struct TraceHooks {
     extern(C) void function(Shader, void*) destroy_shader = null;
     extern(C) void function(Pipeline, void*) destroy_pipeline = null;
     extern(C) void function(View, void*) destroy_view = null;
-    extern(C) void function(Buffer, const Range*, void*) update_buffer = null;
-    extern(C) void function(Image, const ImageData*, void*) update_image = null;
-    extern(C) void function(Buffer, const Range*, int, void*) append_buffer = null;
     extern(C) void function(const WriteBufferDesc*, void*) write_buffer_transient = null;
     extern(C) void function(const WriteImageDesc*, void*) write_image_transient = null;
     extern(C) void function(const WriteBufferDesc*, void*) write_buffer_unsealed = null;
     extern(C) void function(const WriteImageDesc*, void*) write_image_unsealed = null;
     extern(C) void function(Buffer, void*) seal_buffer = null;
     extern(C) void function(Image, void*) seal_image = null;
+    extern(C) void function(const CopyBufferToBufferDesc*, void*) copy_buffer_to_buffer = null;
+    extern(C) void function(const CopyBufferToImageDesc*, void*) copy_buffer_to_image = null;
     extern(C) void function(const Pass*, void*) begin_pass = null;
     extern(C) void function(int, int, int, int, bool, void*) apply_viewport = null;
     extern(C) void function(int, int, int, int, bool, void*) apply_scissor_rect = null;
@@ -2192,16 +2324,11 @@ extern(C) struct BufferInfo {
     SlotInfo slot = {};
     int num_slots = 0;
     int active_slot = 0;
-    uint update_frame_index = 0;
-    uint append_frame_index = 0;
-    int append_pos = 0;
-    bool append_overflow = false;
 }
 extern(C) struct ImageInfo {
     SlotInfo slot = {};
     int num_slots = 0;
     int active_slot = 0;
-    uint upd_frame_index = 0;
 }
 extern(C) struct SamplerInfo {
     SlotInfo slot = {};
@@ -2400,19 +2527,17 @@ extern(C) struct FrameStats {
     uint num_draw = 0;
     uint num_draw_ex = 0;
     uint num_dispatch = 0;
-    uint num_update_buffer = 0;
-    uint num_append_buffer = 0;
-    uint num_update_image = 0;
     uint num_write_buffer_transient = 0;
     uint num_write_image_transient = 0;
     uint num_write_buffer_unsealed = 0;
     uint num_write_image_unsealed = 0;
     uint num_seal_buffer = 0;
     uint num_seal_image = 0;
+    uint num_copy_buffer_to_buffer = 0;
+    uint num_copy_buffer_to_image = 0;
     uint size_apply_uniforms = 0;
-    uint size_update_buffer = 0;
-    uint size_append_buffer = 0;
-    uint size_update_image = 0;
+    uint size_copy_buffer_to_buffer = 0;
+    uint size_copy_buffer_to_image = 0;
     FrameResourceStats buffers = {};
     FrameResourceStats images = {};
     FrameResourceStats samplers = {};
@@ -2449,6 +2574,7 @@ enum LogItem {
     Gl_framebuffer_status_unsupported,
     Gl_framebuffer_status_incomplete_multisample,
     Gl_framebuffer_status_unknown,
+    Gl_apple_pixel_unpack_offset_bug,
     D3d11_feature_level_0_detected,
     D3d11_create_buffer_failed,
     D3d11_create_buffer_srv_failed,
@@ -2480,9 +2606,6 @@ enum LogItem {
     D3d11_create_rtv_failed,
     D3d11_create_dsv_failed,
     D3d11_create_uav_failed,
-    D3d11_map_for_update_buffer_failed,
-    D3d11_map_for_append_buffer_failed,
-    D3d11_map_for_update_image_failed,
     D3d11_map_for_write_buffer_transient_failed,
     Metal_create_buffer_failed,
     Metal_texture_format_not_supported,
@@ -2596,11 +2719,23 @@ enum LogItem {
     Beginpass_attachments_alive,
     Draw_without_bindings,
     Write_buffer_transient_buffer_alive,
+    Write_buffer_transient_buffer_valid,
     Write_image_transient_image_alive,
+    Write_image_transient_image_valid,
     Write_buffer_unsealed_buffer_alive,
+    Write_buffer_unsealed_buffer_unsealed,
     Write_image_unsealed_image_alive,
+    Write_image_unsealed_image_unsealed,
     Seal_buffer_alive,
     Seal_image_alive,
+    Copy_buffer_to_buffer_src_alive,
+    Copy_buffer_to_buffer_dst_alive,
+    Copy_buffer_to_buffer_src_valid,
+    Copy_buffer_to_buffer_dst_valid,
+    Copy_buffer_to_image_src_alive,
+    Copy_buffer_to_image_dst_alive,
+    Copy_buffer_to_image_src_valid,
+    Copy_buffer_to_image_dst_valid,
     Shaderdesc_too_many_vertexstage_textures,
     Shaderdesc_too_many_fragmentstage_textures,
     Shaderdesc_too_many_computestage_textures,
@@ -2614,13 +2749,25 @@ enum LogItem {
     Shaderdesc_too_many_fragmentstage_texturesamplerpairs,
     Shaderdesc_too_many_computestage_texturesamplerpairs,
     Validate_bufferdesc_canary,
-    Validate_bufferdesc_immutable_vs_writable,
-    Validate_bufferdesc_unsealed_vs_immutable,
-    Validate_bufferdesc_separate_buffer_types,
     Validate_bufferdesc_expect_nonzero_size,
+    Validate_bufferdesc_staging_vs_vertexbuffer,
+    Validate_bufferdesc_staging_vs_indexbuffer,
+    Validate_bufferdesc_staging_vs_storagebuffer,
+    Validate_bufferdesc_staging_vs_injected,
+    Validate_bufferdesc_staging_vs_copydst,
+    Validate_bufferdesc_staging_vs_initialdata,
+    Validate_bufferdesc_staging_copysrc,
+    Validate_bufferdesc_separate_buffer_types,
+    Validate_bufferdesc_writeunsealed_vs_writetransient,
+    Validate_bufferdesc_writeunsealed_vs_copydst,
+    Validate_bufferdesc_writeunsealed_vs_staging,
+    Validate_bufferdesc_writeunsealed_vs_initialdata,
+    Validate_bufferdesc_writetransient_vs_copydst,
+    Validate_bufferdesc_writetransient_vs_initialdata,
+    Validate_bufferdesc_writetransient_vs_injected,
+    Validate_bufferdesc_copydst_vs_initialdata,
     Validate_bufferdesc_expect_matching_data_size,
     Validate_bufferdesc_expect_zero_data_size,
-    Validate_bufferdesc_expect_no_data,
     Validate_bufferdesc_expect_data,
     Validate_bufferdesc_storagebuffer_supported,
     Validate_bufferdesc_storagebuffer_size_multiple_4,
@@ -2628,10 +2775,11 @@ enum LogItem {
     Validate_imagedata_data_size,
     Validate_imagedesc_canary,
     Validate_imagedesc_immutable_vs_writable,
-    Validate_imagedesc_write_unsealed_vs_immutable,
-    Validate_imagedesc_write_unsealed_vs_attachment,
-    Validate_imagedesc_write_transient_vs_attachment,
-    Validate_imagedesc_dynamic_update_vs_attachment,
+    Validate_imagedesc_writeunsealed_vs_immutable,
+    Validate_imagedesc_writeunsealed_vs_attachment,
+    Validate_imagedesc_writetransient_vs_attachment,
+    Validate_imagedesc_writetransient_vs_injected,
+    Validate_imagedesc_copydst_vs_attachment,
     Validate_imagedesc_attachment_color_depth_stencil,
     Validate_imagedesc_imagetype_2d_numslices,
     Validate_imagedesc_imagetype_cube_numslices,
@@ -2658,7 +2806,6 @@ enum LogItem {
     Validate_imagedesc_storageimage_expect_no_msaa,
     Validate_imagedesc_injected_no_data,
     Validate_imagedesc_writable_no_data,
-    Validate_imagedesc_compressed_immutable,
     Validate_samplerdesc_canary,
     Validate_samplerdesc_anistropic_requires_linear_filtering,
     Validate_shaderdesc_canary,
@@ -2863,23 +3010,21 @@ enum LogItem {
     Validate_abnd_expected_vbuf,
     Validate_abnd_vbuf_alive,
     Validate_abnd_vbuf_usage,
-    Validate_abnd_vbuf_overflow,
     Validate_abnd_expected_no_ibuf,
     Validate_abnd_expected_ibuf,
     Validate_abnd_ibuf_alive,
     Validate_abnd_ibuf_usage,
-    Validate_abnd_ibuf_overflow,
     Validate_abnd_expected_view_binding,
     Validate_abnd_view_alive,
     Validate_abnd_expect_texview,
     Validate_abnd_expect_sbview,
+    Validate_abnd_sbview_readwrite_vs_writetransient,
     Validate_abnd_expect_simgview,
     Validate_abnd_texview_imagetype_mismatch,
     Validate_abnd_texview_expected_multisampled_image,
     Validate_abnd_texview_expected_non_multisampled_image,
     Validate_abnd_texview_expected_filterable_image,
     Validate_abnd_texview_expected_depth_image,
-    Validate_abnd_sbview_readwrite_immutable,
     Validate_abnd_simgview_compute_pass_expected,
     Validate_abnd_simgview_imagetype_mismatch,
     Validate_abnd_simgview_accessformat,
@@ -2924,19 +3069,10 @@ enum LogItem {
     Validate_dispatch_required_bindings_or_uniforms_missing,
     Validate_dispatch_write_buffer_transient_missing,
     Validate_dispatch_write_image_transient_missing,
-    Validate_updatebuf_usage,
-    Validate_updatebuf_size,
-    Validate_updatebuf_once,
-    Validate_updatebuf_append,
-    Validate_appendbuf_usage,
-    Validate_appendbuf_size,
-    Validate_appendbuf_update,
-    Validate_updimg_usage,
-    Validate_updimg_once,
     Validate_writebufferunsealed_usage,
-    Validate_writebufferunsealed_resourcestate,
     Validate_writebuffertransient_usage,
     Validate_writebuffertransient_write_before_bind,
+    Validate_writebuffertransient_write_before_copy,
     Validate_writebuffertransient_dst_offset_alignment,
     Validate_writebuffer_src_data_pointer,
     Validate_writebuffer_src_data_size,
@@ -2944,13 +3080,14 @@ enum LogItem {
     Validate_writebuffer_write_overflow,
     Validate_writebuffer_read_overflow,
     Validate_writeimageunsealed_usage,
-    Validate_writeimageunsealed_resourcestate,
     Validate_writeimagetransient_usage,
     Validate_writeimagetransient_write_before_bind,
     Validate_writeimage_src_data_pointer,
     Validate_writeimage_src_data_size,
     Validate_writeimage_bytesperrow,
     Validate_writeimage_bytesperslice,
+    Validate_writeimage_bytesperrow_too_small,
+    Validate_writeimage_bytesperslice_too_small,
     Validate_writeimage_miplevel,
     Validate_writeimage_width,
     Validate_writeimage_height,
@@ -2962,8 +3099,49 @@ enum LogItem {
     Validate_writeimage_write_width_overflow,
     Validate_writeimage_write_height_overflow,
     Validate_writeimage_write_numslices_overflow,
+    Validate_writeimage_dst_x_alignment,
+    Validate_writeimage_dst_y_alignment,
+    Validate_writeimage_width_multiple,
+    Validate_writeimage_height_multiple,
     Validate_sealbuffer_resourcestate,
     Validate_sealimage_resourcestate,
+    Validate_copybuffertobuffer_inside_pass,
+    Validate_copybuffertobuffer_src_vs_dst_buffer,
+    Validate_copybuffertobuffer_copy_src,
+    Validate_copybuffertobuffer_copy_dst,
+    Validate_copybuffertobuffer_zero_size,
+    Validate_copybuffertobuffer_src_offset_alignment,
+    Validate_copybuffertobuffer_dst_offset_alignment,
+    Validate_copybuffertobuffer_src_overflow,
+    Validate_copybuffertobuffer_dst_overflow,
+    Validate_copybuffertobuffer_webgl2_index_buffer,
+    Validate_copybuffertoimage_webgl2_index_buffer,
+    Validate_copybuffertoimage_bytesperrow_too_small,
+    Validate_copybuffertoimage_bytesperslice_too_small,
+    Validate_copybuffertoimage_src_staging_index_buffer,
+    Validate_copybuffertoimage_src_staging_buffer,
+    Validate_copybuffertoimage_inside_pass,
+    Validate_copybuffertoimage_copy_src,
+    Validate_copybuffertoimage_copy_dst,
+    Validate_copybuffertoimage_src_offset_alignment,
+    Validate_copybuffertoimage_bytesperrow_multiple_blocksize,
+    Validate_copybuffertoimage_bytesperrow_multiple_256,
+    Validate_copybuffertoimage_bytesperslice,
+    Validate_copybuffertoimage_src_overflow,
+    Validate_copybuffertoimage_dst_miplevel,
+    Validate_copybuffertoimage_dst_width,
+    Validate_copybuffertoimage_dst_height,
+    Validate_copybuffertoimage_dst_width_multiple,
+    Validate_copybuffertoimage_dst_height_multiple,
+    Validate_copybuffertoimage_dst_numslices,
+    Validate_copybuffertoimage_dst_x_range,
+    Validate_copybuffertoimage_dst_y_range,
+    Validate_copybuffertoimage_dst_x_alignment,
+    Validate_copybuffertoimage_dst_y_alignment,
+    Validate_copybuffertoimage_dst_slice_range,
+    Validate_copybuffertoimage_dst_width_overflow,
+    Validate_copybuffertoimage_dst_height_overflow,
+    Validate_copybuffertoimage_dst_numslices_overflow,
     Validation_failed,
 }
 /++
@@ -3056,10 +3234,9 @@ enum LogItem {
 +     Vulkan specific:
 +         .vulkan.copy_staging_buffer_size
 +             Size of the staging buffer in bytes for uploading the initial
-+             content of buffers and images, and for updating
-+             .usage.dynamic_update resources. The default is 4 MB,
-+             bigger resource updates are split into multiple chunks
-+             of the staging buffer size
++             content of buffers and images and for write-unsealed writes.
++             The default is 4 MB, bigger resource updates are split into
++             multiple chunks of the staging buffer size
 +         .vulkan.transient_staging_buffer_size
 +             Size of the staging buffer in bytes for updating .usage.write_transient
 +             resources. The default is 16 MB. The size must be big enough
@@ -3361,28 +3538,13 @@ extern(C) void sg_seal_image(Image img) @system @nogc nothrow pure;
 void sealImage(Image img) @trusted @nogc nothrow pure {
     sg_seal_image(img);
 }
-/++
-+ update functions (will be deprecated by new resource update functions)
-+/
-extern(C) void sg_update_buffer(Buffer buf, const Range* data) @system @nogc nothrow pure;
-void updateBuffer(Buffer buf, scope ref Range data) @trusted @nogc nothrow pure {
-    sg_update_buffer(buf, &data);
+extern(C) void sg_copy_buffer_to_buffer(const CopyBufferToBufferDesc* desc) @system @nogc nothrow pure;
+void copyBufferToBuffer(scope ref CopyBufferToBufferDesc desc) @trusted @nogc nothrow pure {
+    sg_copy_buffer_to_buffer(&desc);
 }
-extern(C) void sg_update_image(Image img, const ImageData* data) @system @nogc nothrow pure;
-void updateImage(Image img, scope ref ImageData data) @trusted @nogc nothrow pure {
-    sg_update_image(img, &data);
-}
-extern(C) int sg_append_buffer(Buffer buf, const Range* data) @system @nogc nothrow pure;
-int appendBuffer(Buffer buf, scope ref Range data) @trusted @nogc nothrow pure {
-    return sg_append_buffer(buf, &data);
-}
-extern(C) bool sg_query_buffer_overflow(Buffer buf) @system @nogc nothrow pure;
-bool queryBufferOverflow(Buffer buf) @trusted @nogc nothrow pure {
-    return sg_query_buffer_overflow(buf);
-}
-extern(C) bool sg_query_buffer_will_overflow(Buffer buf, size_t size) @system @nogc nothrow pure;
-bool queryBufferWillOverflow(Buffer buf, size_t size) @trusted @nogc nothrow pure {
-    return sg_query_buffer_will_overflow(buf, size);
+extern(C) void sg_copy_buffer_to_image(const CopyBufferToImageDesc* desc) @system @nogc nothrow pure;
+void copyBufferToImage(scope ref CopyBufferToImageDesc desc) @trusted @nogc nothrow pure {
+    sg_copy_buffer_to_image(&desc);
 }
 /++
 + getting information
@@ -3414,6 +3576,10 @@ int queryRowPitch(PixelFormat fmt, int width, int row_align_bytes) @trusted @nog
 extern(C) int sg_query_surface_pitch(PixelFormat fmt, int width, int height, int row_align_bytes) @system @nogc nothrow pure;
 int querySurfacePitch(PixelFormat fmt, int width, int height, int row_align_bytes) @trusted @nogc nothrow pure {
     return sg_query_surface_pitch(fmt, width, height, row_align_bytes);
+}
+extern(C) PassState sg_query_pass_state() @system @nogc nothrow pure;
+PassState queryPassState() @trusted @nogc nothrow pure {
+    return sg_query_pass_state();
 }
 /++
 + get current state of a resource (INITIAL, ALLOC, VALID, FAILED, INVALID)

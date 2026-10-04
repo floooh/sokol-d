@@ -103,9 +103,10 @@ extern (C) void frame() @trusted @nogc nothrow
     End();
     /*=== UI CODE ENDS HERE ===*/
 
+    simgui.flush;
     sg.Pass pass = {swapchain: sgapp.swapchain};
     sg.beginPass(pass);
-    simgui.render;
+    simgui.draw;
     sg.endPass;
     sg.commit;
 }

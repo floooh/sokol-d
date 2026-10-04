@@ -32,7 +32,7 @@ extern (C):
         simgui.shutdown;
     }
 
-    void __dbgui_draw() @safe @nogc nothrow
+    void __dbgui_update() @safe @nogc nothrow
     {
         //dfmt off
         simgui.FrameDesc sframe = {
@@ -50,7 +50,12 @@ extern (C):
             cimgui.EndMainMenuBar;
         }
         sgimgui.draw();
-        simgui.render;
+        simgui.flush();
+    }
+
+    void __dbgui_draw() @safe @nogc nothrow
+    {
+        simgui.draw();
     }
 
     void __dbgui_event(const(sapp.Event)* ev) @trusted @nogc nothrow

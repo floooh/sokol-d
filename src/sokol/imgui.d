@@ -13,6 +13,10 @@ import sapp = sokol.app;
 enum LogItem {
     Ok,
     Buffer_overflow,
+    New_frame_not_called_before_flush,
+    Flush_called_in_sokolgfx_pass,
+    Flush_not_called_before_draw,
+    Draw_called_outside_sokolgfx_render_pass,
 }
 /++
 + simgui_logger
@@ -59,9 +63,13 @@ extern(C) void simgui_new_frame(const FrameDesc* desc) @system @nogc nothrow pur
 void newFrame(scope ref FrameDesc desc) @trusted @nogc nothrow pure {
     simgui_new_frame(&desc);
 }
-extern(C) void simgui_render() @system @nogc nothrow pure;
-void render() @trusted @nogc nothrow pure {
-    simgui_render();
+extern(C) void simgui_flush() @system @nogc nothrow pure;
+void flush() @trusted @nogc nothrow pure {
+    simgui_flush();
+}
+extern(C) void simgui_draw() @system @nogc nothrow pure;
+void draw() @trusted @nogc nothrow pure {
+    simgui_draw();
 }
 extern(C) ulong simgui_imtextureid(sg.View tex_view) @system @nogc nothrow pure;
 ulong imtextureid(sg.View tex_view) @trusted @nogc nothrow pure {

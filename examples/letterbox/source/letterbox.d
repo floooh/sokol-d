@@ -92,9 +92,10 @@ void frame() @trusted nothrow
         swapchain: sglue.swapchain,
     };
     // dfmt on
+    simgui.flush();
     sg.beginPass(pass);
     sgl.draw();
-    simgui.render();
+    simgui.draw();
     sg.endPass();
     sg.commit();
 }
