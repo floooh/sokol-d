@@ -1606,9 +1606,13 @@ extern(C) struct CopyBufferToBufferDesc {
 +         - 'fuzzy' GL restriction (this is not currently enforced by the validation layer):
 +           when copying into compressed textures, the source data must be tightly packed
 +           (e.g. .src.bytes_per_row and .src.bytes_per_slice will be ignored)
-+         - on the Apple GL/GLES3 backends, the source buffer offset in `sg_copy_buffer_to_image()`
-+           is ignored because of a driver bug, sokol_gfx.h will log a one-time message
-+           when the bug would be triggered
++         - On the Apple GL/GLES3 backends, when calling `sg_copy_buffer_to_image()`
++           from a non-staging buffer, the source buffer offset is ignored because
++           of a GL driver bug (which is unlikely to be fixed because
++           GL on macOS is long deprecated), sokol_gfx.h will log a one-time message
++           when the bug would be triggered. For copying from staging buffers, the
++           offset works because of a special workaround in the sokol-gfx GL backend
++           (staging buffers are actually heap memory allocations).
 +/
 extern(C) struct CopyBufferToImageDesc {
     BufferImageLocation src = {};
