@@ -1806,11 +1806,14 @@ extern(C) struct SamplerDesc {
 + 
 +     - storage-buffer bindings must provide the following information:
 +         - the shader stage the storage buffer appears in (SG_SHADERSTAGE_*)
-+         - whether the storage buffer is readonly
++         - whether the storage buffer is readonly (must be true in vertex shaders)
 +         - backend specific bindslots:
 +             - HLSL:
-+                 - for storage buffer bindings: `register(t0..31)`
++                 - for readonly storage buffer bindings: `register(t0..31)`
 +                 - for read/write storage buffer bindings: `register(u0..31)`
++                   in compute shaders, and `register(uN..31)` in fragment shaders
++                   where N must be >= the number of color attachments used
++                   in the fragment shader
 +             - MSL: the buffer attribute `[[buffer(8..23)]]`
 +             - WGSL: the binding in `@group(1) @binding(0..127)`
 +             - GL: the binding in `layout(binding=0..sg_limits.max_storage_buffer_bindings_per_stage)`
@@ -2396,6 +2399,7 @@ extern(C) struct FrameStatsD3d11Bindings {
     uint num_cs_set_shader_resources = 0;
     uint num_cs_set_samplers = 0;
     uint num_cs_set_unordered_access_views = 0;
+    uint num_om_set_rts_and_uavs = 0;
 }
 extern(C) struct FrameStatsD3d11Uniforms {
     uint num_update_subresource = 0;
@@ -2834,6 +2838,7 @@ enum LogItem {
     Validate_shaderdesc_uniformblock_size_mismatch,
     Validate_shaderdesc_uniformblock_array_count,
     Validate_shaderdesc_uniformblock_std140_array_type,
+    Validate_shaderdesc_view_storagebuffer_vertexshader_readwrite,
     Validate_shaderdesc_view_storagebuffer_metal_buffer_slot_collision,
     Validate_shaderdesc_view_storagebuffer_hlsl_register_t_collision,
     Validate_shaderdesc_view_storagebuffer_hlsl_register_u_collision,
@@ -2875,6 +2880,8 @@ enum LogItem {
     Validate_pipelinedesc_layout_stride4,
     Validate_pipelinedesc_attr_semantics,
     Validate_pipelinedesc_shader_readonly_storagebuffers,
+    Validate_pipelinedesc_shader_hlsl_register_u_vs_color_count,
+    Validate_pipelinedesc_shader_hlsl_register_u_limit,
     Validate_pipelinedesc_blendop_minmax_requires_blendfactor_one,
     Validate_pipelinedesc_dual_source_blending_not_supported,
     Validate_pipelinedesc_depth_format_none_but_depth_write_enabled,
@@ -3014,15 +3021,19 @@ enum LogItem {
     Validate_abnd_expected_vbuf,
     Validate_abnd_vbuf_alive,
     Validate_abnd_vbuf_usage,
+    Validate_abnd_vbuf_vs_sbview_readwrite,
     Validate_abnd_expected_no_ibuf,
     Validate_abnd_expected_ibuf,
     Validate_abnd_ibuf_alive,
     Validate_abnd_ibuf_usage,
+    Validate_abnd_ibuf_vs_sbview_readwrite,
     Validate_abnd_expected_view_binding,
     Validate_abnd_view_alive,
     Validate_abnd_expect_texview,
     Validate_abnd_expect_sbview,
     Validate_abnd_sbview_readwrite_vs_writetransient,
+    Validate_abnd_sbview_readonly_vs_readwrite,
+    Validate_abnd_sbview_readwrite_vs_read,
     Validate_abnd_expect_simgview,
     Validate_abnd_texview_imagetype_mismatch,
     Validate_abnd_texview_expected_multisampled_image,
