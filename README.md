@@ -54,11 +54,19 @@ dub init -t sokol-d <project-name>
 - instancing
 - instancingcompute
 - letterbox
+- mrt
+- noninterleaved
 - nuklear
+- offscreen
+- quad
 - saudio
 - sglcontext
 - sglpoints
+- shapes
+- texcube
 - triangle
+- userdata
+- vertexpull
 
 See [examples](examples/README.md)
 

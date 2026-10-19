@@ -1,4 +1,4 @@
-// Generated on 2026-07-31
+// Generated on 2026-10-23
 /++
 + D wrapper for cimgui (Dear ImGui).
 + Provides bindings for Dear ImGui immediate mode GUI library.
@@ -2225,7 +2225,7 @@ const(ImGuiPayload)* GetDragDropPayload() @trusted
 }
 
 /++
-+ Disabling [BETA API]
++ Disabling
 +  Disable all user interactions and dim items visuals (applying style.DisabledAlpha over current colors)
 +  Those can be nested but it cannot be used to enable an already disabled section (a single BeginDisabled(true) in the stack is enough to keep everything disabled)
 +  Tooltips windows are automatically opted out of disabling. Note that IsItemHovered() by default returns false on disabled items, unless using ImGuiHoveredFlags_AllowWhenDisabled.
@@ -3384,6 +3384,16 @@ ImVec2 WindowPosRelToAbs(scope ImGuiWindow* window, ImVec2 p) @trusted
     return igWindowPosRelToAbs(window, p);
 }
 
+void SetNextWindowFlags(ImGuiWindowFlags flags, bool enabled) @trusted
+{
+    igSetNextWindowFlags(flags, enabled);
+}
+
+void SetNextWindowChildFlags(ImGuiChildFlags flags, bool enabled) @trusted
+{
+    igSetNextWindowChildFlags(flags, enabled);
+}
+
 /++
 + Windows: Display Order and Focus Order
 +/
@@ -3468,14 +3478,14 @@ void UpdateCurrentFontSize(float restore_font_size_after_scaling) @trusted
     igUpdateCurrentFontSize(restore_font_size_after_scaling);
 }
 
-void SetFontRasterizerDensity(float rasterizer_density) @trusted
+void SetPixelDensity(float pixel_density) @trusted
 {
-    igSetFontRasterizerDensity(rasterizer_density);
+    igSetPixelDensity(pixel_density);
 }
 
-float GetFontRasterizerDensity() @trusted
+float GetPixelDensity() @trusted
 {
-    return igGetFontRasterizerDensity();
+    return igGetPixelDensity();
 }
 
 float GetRoundedFontSize(float size) @trusted
@@ -4526,6 +4536,11 @@ void RenderDragDropTargetRectForItem(ImRect bb) @trusted
     igRenderDragDropTargetRectForItem(bb);
 }
 
+void RenderDragDropTargetRectForViewport(ImGuiID viewport_id, ImRect bb) @trusted
+{
+    igRenderDragDropTargetRectForViewport(viewport_id, bb);
+}
+
 void RenderDragDropTargetRectEx(scope ImDrawList* draw_list, ImRect bb, float rounding) @trusted
 {
     igRenderDragDropTargetRectEx(draw_list, bb, rounding);
@@ -4658,6 +4673,11 @@ int TabBarGetTabOrder(scope ImGuiTabBar* tab_bar, scope ImGuiTabItem* tab) @trus
 const(char)* TabBarGetTabName(scope ImGuiTabBar* tab_bar, scope ImGuiTabItem* tab) @trusted
 {
     return igTabBarGetTabName(tab_bar, tab);
+}
+
+ImVec2 TabBarGetTabPos(scope ImGuiTabBar* tab_bar, scope ImGuiTabItem* tab) @trusted
+{
+    return igTabBarGetTabPos(tab_bar, tab);
 }
 
 void TabBarRemoveTab(scope ImGuiTabBar* tab_bar, ImGuiID tab_id) @trusted
@@ -4795,14 +4815,14 @@ void RenderColorComponentMarker(ImRect bb, ImU32 col, float rounding) @trusted
     igRenderColorComponentMarker(bb, col, rounding);
 }
 
-void RenderColorRectWithAlphaCheckerboard(scope ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, float grid_step, ImVec2 grid_off) @trusted
+void RenderColorRectWithAlphaCheckerboard(scope ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 col, float alpha, float grid_step, ImVec2 grid_off) @trusted
 {
-    igRenderColorRectWithAlphaCheckerboard(draw_list, p_min, p_max, fill_col, grid_step, grid_off);
+    igRenderColorRectWithAlphaCheckerboard(draw_list, p_min, p_max, col, alpha, grid_step, grid_off);
 }
 
-void RenderColorRectWithAlphaCheckerboardEx(scope ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, float grid_step, ImVec2 grid_off, float rounding, ImDrawFlags flags) @trusted
+void RenderColorRectWithAlphaCheckerboardEx(scope ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 col, float alpha, float grid_step, ImVec2 grid_off, float rounding, ImDrawFlags flags) @trusted
 {
-    igRenderColorRectWithAlphaCheckerboardEx(draw_list, p_min, p_max, fill_col, grid_step, grid_off, rounding, flags);
+    igRenderColorRectWithAlphaCheckerboardEx(draw_list, p_min, p_max, col, alpha, grid_step, grid_off, rounding, flags);
 }
 
 void RenderNavCursor(ImRect bb, ImGuiID id) @trusted
