@@ -19,11 +19,19 @@ Available examples:
 - instancing
 - instancingcompute
 - letterbox
+- mrt
+- noninterleaved
 - nuklear
+- offscreen
+- quad
 - saudio
 - sglcontext
 - sglpoints
+- shapes
+- texcube
 - triangle
+- userdata
+- vertexpull
 
 Build command format:
 ```console
