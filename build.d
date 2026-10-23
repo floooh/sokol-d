@@ -769,6 +769,7 @@ void emLinkStep(EmLinkOptions opts) @safe
 
     if (opts.backend == SokolBackend.wgpu)
         cmd ~= "--use-port=emdawnwebgpu";
+        cmd ~= "-sDEFAULT_TO_CXX";
     if (opts.backend == SokolBackend.gles3)
         cmd ~= "-sUSE_WEBGL2=1";
     if (!opts.use_filesystem)
