@@ -121,16 +121,13 @@ void init()
         },
     };
     // create a small checker-board image and texture view
-    sg.ImageData img_data = {
-        mip_levels: [{
-            ptr: cast(ubyte*)colors.ptr,
-            size: colors.sizeof,
-        }]
-    };
     sg.ImageDesc img_desc = {
         width: 4,
         height: 4,
-        data: img_data,
+        data: {
+            ptr: cast(ubyte*)colors.ptr,
+            size: colors.sizeof,
+        },
     };
     // dfmt on
     auto img = sg.makeImage(img_desc);
