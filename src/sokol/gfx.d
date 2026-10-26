@@ -1880,7 +1880,7 @@ extern(C) struct SamplerDesc {
 +         - backend specific bindslots:
 +             - HLSL: the sampler register `register(s0..11)`
 +             - MSL: the sampler attribute `[[sampler(0..11)]]`
-+             - WGSL: the binding in `@group(0) @binding(0..127)`
++             - WGSL: the binding in `@group(1) @binding(0..127)`
 + 
 +     - reflection information for each texture-sampler pair used by
 +       the shader:
