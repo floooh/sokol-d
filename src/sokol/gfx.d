@@ -251,6 +251,7 @@ extern(C) struct Features {
     bool vertexformat_int10_n2 = false;
     bool copy_buffer_to_image_relaxed_buffer_type = false;
     bool copy_buffer_to_image_relaxed_bytes_per_row = false;
+    bool copy_image_to_image_relaxed = false;
     bool gl_texture_views = false;
 }
 /++
@@ -1291,9 +1292,6 @@ extern(C) struct BufferDesc {
 +     .copy_dst (default: false)
 +         the image is going to be used as destination in an `sg_copy_buffer_to_image()`
 +         call
-+     .immutable (default: true, deprecated)
-+         the image content cannot be updated from the CPU side
-+         (but may be updated by the GPU in a render- or compute-pass)
 + 
 +     Note that creating a texture view from the image to be used for
 +     texture-sampling in vertex-, fragment- or compute-shaders
@@ -1308,7 +1306,6 @@ extern(C) struct ImageUsage {
     bool write_transient = false;
     bool copy_src = false;
     bool copy_dst = false;
-    bool _immutable = false;
 }
 /++
 + sg_view_type
@@ -1323,42 +1320,6 @@ enum ViewType {
     Colorattachment,
     Resolveattachment,
     Depthstencilattachment,
-}
-/++
-+ sg_image_data
-+ 
-+     Defines the content of an image through an array of sg_range structs, each
-+     range pointing to the pixel data for one mip-level. For array-, cubemap- and
-+     3D-images each mip-level contains all slice-surfaces for that mip-level in a
-+     single tightly packed memory block.
-+ 
-+     The size of a single surface in a mip-level for a regular 2D texture
-+     can be computed via:
-+ 
-+         sg_query_surface_pitch(pixel_format, mip_width, mip_height, 1);
-+ 
-+     For array- and 3d-images the size of a single miplevel is:
-+ 
-+         num_slices * sg_query_surface_pitch(pixel_format, mip_width, mip_height, 1);
-+ 
-+     For cubemap-images the size of a single mip-level is:
-+ 
-+         6 * sg_query_surface_pitch(pixel_format, mip_width, mip_height, 1);
-+ 
-+     The order of cubemap-faces is in a mip-level data chunk is:
-+ 
-+         [0] => +X
-+         [1] => -X
-+         [2] => +Y
-+         [3] => -Y
-+         [4] => +Z
-+         [5] => -Z
-+ 
-+     NOTE: for more flexible resource initialization of immutable images
-+     also consider the sg_write_image_unsealed() function!
-+/
-extern(C) struct ImageData {
-    Range[16] mip_levels = [];
 }
 /++
 + sg_image_extent
@@ -1620,6 +1581,16 @@ extern(C) struct CopyBufferToImageDesc {
     ImageExtent size = {};
 }
 /++
++ sg_copy_image_to_image_desc
++ 
++     FIXME
++/
+extern(C) struct CopyImageToImageDesc {
+    ImageLocation src = {};
+    ImageLocation dst = {};
+    ImageExtent size = {};
+}
+/++
 + sg_image_desc
 + 
 +     Creation parameters for sg_image objects, used in the sg_make_image() call.
@@ -1627,14 +1598,14 @@ extern(C) struct CopyBufferToImageDesc {
 +     The default configuration is:
 + 
 +     .type               SG_IMAGETYPE_2D
-+     .usage              .immutable = true
++     .usage              { .texture = true }
 +     .width              0 (must be set to >0)
 +     .height             0 (must be set to >0)
 +     .num_slices         1 (3D textures: depth; array textures: number of layers)
 +     .num_mipmaps        1
 +     .pixel_format       SG_PIXELFORMAT_RGBA8 for textures, or sg_desc.environment.defaults.color_format for render targets
 +     .sample_count       1 for textures, or sg_desc.environment.defaults.sample_count for render targets
-+     .data               an sg_image_data struct to define the initial content
++     .data               optional ptr/size pair with complete and tightly packed initial data
 +     .label              0 (optional string label for trace hooks)
 + 
 +     Q: Why is the default sample_count for render targets identical with the
@@ -1648,9 +1619,37 @@ extern(C) struct CopyBufferToImageDesc {
 + 
 +     NOTE:
 + 
-+     Regular images used as texture binding with usage.immutable must be fully
-+     initialized by providing a valid .data member which points to initialization
-+     data.
++     When initial data is provided via sg_image_desc.data, it must be the complete
++     and tightly packed data for all mip levels and slices in one continuous block
++     of memory. For a more flexible initialization of the initial image content,
++     use sg_write_image_unsealed().
++ 
++     The size of a single surface in a mip-level for a regular 2D texture
++     can be computed via:
++ 
++         sg_query_surface_pitch(pixel_format, mip_width, mip_height, 1);
++ 
++     For array-images the size of a single miplevel is:
++ 
++         num_slices * sg_query_surface_pitch(pixel_format, mip_width, mip_height, 1);
++ 
++     For 3d-images the size of a single miplevel is:
++ 
++         mip_slices * sg_query_surface_pitch(pixel_format, mip_width, mip_height, 1);
++ 
++     For cubemap-images the size of a single mip-level is:
++ 
++         6 * sg_query_surface_pitch(pixel_format, mip_width, mip_height, 1);
++ 
++     The order of cubemap-faces is in a mip-level data chunk is:
++ 
++         [0] => +X
++         [1] => -X
++         [2] => +Y
++         [3] => -Y
++         [4] => +Z
++         [5] => -Z
++ 
 + 
 +     Images with usage.*_attachment or usage.storage_image must
 +     *not* be created with initial content. Be aware that the initial
@@ -1662,8 +1661,9 @@ extern(C) struct CopyBufferToImageDesc {
 +     The following struct members allow to inject your own GL, Metal or D3D11
 +     textures into sokol_gfx:
 + 
-+     .gl_textures[SG_NUM_INFLIGHT_FRAMES]
-+     .mtl_textures[SG_NUM_INFLIGHT_FRAMES]
++     .gl_texture
++     .gl_texture_target
++     .mtl_texture
 +     .d3d11_texture
 +     .wgpu_texture
 + 
@@ -1684,7 +1684,7 @@ extern(C) struct ImageDesc {
     int num_mipmaps = 0;
     PixelFormat pixel_format = PixelFormat.Default;
     int sample_count = 0;
-    ImageData data = {};
+    Range data = {};
     const(char)* label = null;
     uint gl_texture = 0;
     uint gl_texture_target = 0;
@@ -2255,6 +2255,7 @@ extern(C) struct TraceHooks {
     extern(C) void function(Image, void*) seal_image = null;
     extern(C) void function(const CopyBufferToBufferDesc*, void*) copy_buffer_to_buffer = null;
     extern(C) void function(const CopyBufferToImageDesc*, void*) copy_buffer_to_image = null;
+    extern(C) void function(const CopyImageToImageDesc*, void*) copy_image_to_image = null;
     extern(C) void function(const Pass*, void*) begin_pass = null;
     extern(C) void function(int, int, int, int, bool, void*) apply_viewport = null;
     extern(C) void function(int, int, int, int, bool, void*) apply_scissor_rect = null;
@@ -2499,6 +2500,7 @@ extern(C) struct FrameStatsVk {
     uint num_delete_queue_collected = 0;
     uint num_cmd_copy_buffer = 0;
     uint num_cmd_copy_buffer_to_image = 0;
+    uint num_cmd_copy_image = 0;
     uint num_cmd_set_descriptor_buffer_offsets = 0;
     uint size_descriptor_buffer_writes = 0;
 }
@@ -2543,9 +2545,11 @@ extern(C) struct FrameStats {
     uint num_seal_image = 0;
     uint num_copy_buffer_to_buffer = 0;
     uint num_copy_buffer_to_image = 0;
+    uint num_copy_image_to_image = 0;
     uint size_apply_uniforms = 0;
     uint size_copy_buffer_to_buffer = 0;
     uint size_copy_buffer_to_image = 0;
+    uint size_copy_image_to_image = 0;
     FrameResourceStats buffers = {};
     FrameResourceStats images = {};
     FrameResourceStats samplers = {};
@@ -2744,6 +2748,10 @@ enum LogItem {
     Copy_buffer_to_image_dst_alive,
     Copy_buffer_to_image_src_valid,
     Copy_buffer_to_image_dst_valid,
+    Copy_image_to_image_src_alive,
+    Copy_image_to_image_dst_alive,
+    Copy_image_to_image_src_valid,
+    Copy_image_to_image_dst_valid,
     Shaderdesc_too_many_vertexstage_textures,
     Shaderdesc_too_many_fragmentstage_textures,
     Shaderdesc_too_many_computestage_textures,
@@ -2779,41 +2787,47 @@ enum LogItem {
     Validate_bufferdesc_expect_data,
     Validate_bufferdesc_storagebuffer_supported,
     Validate_bufferdesc_storagebuffer_size_multiple_4,
-    Validate_imagedata_nodata,
-    Validate_imagedata_data_size,
+    Validate_imagedesc_data_size,
     Validate_imagedesc_canary,
-    Validate_imagedesc_immutable_vs_writable,
-    Validate_imagedesc_writeunsealed_vs_immutable,
-    Validate_imagedesc_writeunsealed_vs_attachment,
-    Validate_imagedesc_writetransient_vs_attachment,
+    Validate_imagedesc_any_attachment_vs_copydst,
+    Validate_imagedesc_any_attachment_vs_initialdata,
+    Validate_imagedesc_any_attachment_vs_writetransient,
+    Validate_imagedesc_any_attachment_vs_writeunsealed,
+    Validate_imagedesc_color_attachment_pixelformat,
+    Validate_imagedesc_color_attachment_vs_depthstencil_attachment,
+    Validate_imagedesc_resolve_attachment_expect_no_msaa,
+    Validate_imagedesc_resolve_attachment_vs_depthstencil_attachment,
+    Validate_imagedesc_copydst_vs_initialdata,
+    Validate_imagedesc_depthformat_3d_image,
+    Validate_imagedesc_depthformat_attachment_or_copydst,
+    Validate_imagedesc_depthstencil_attachment_pixelformat,
+    Validate_imagedesc_depthstencil_attachment_vs_storageimage,
+    Validate_imagedesc_storageimage_vs_initialdata,
+    Validate_imagedesc_storageimage_vs_writetransient,
+    Validate_imagedesc_writetransient_vs_copydst,
+    Validate_imagedesc_writetransient_vs_initialdata,
     Validate_imagedesc_writetransient_vs_injected,
-    Validate_imagedesc_copydst_vs_attachment,
-    Validate_imagedesc_attachment_color_depth_stencil,
+    Validate_imagedesc_writeunsealed_vs_copydst,
+    Validate_imagedesc_writeunsealed_vs_initialdata,
+    Validate_imagedesc_writeunsealed_vs_writetransient,
+    Validate_imagedesc_initial_data_required,
+    Validate_imagedesc_injected_expect_no_data,
+    Validate_imagedesc_no_data_but_size_set,
     Validate_imagedesc_imagetype_2d_numslices,
     Validate_imagedesc_imagetype_cube_numslices,
     Validate_imagedesc_imagetype_array_numslices,
     Validate_imagedesc_imagetype_3d_numslices,
-    Validate_imagedesc_numslices,
     Validate_imagedesc_width,
     Validate_imagedesc_height,
-    Validate_imagedesc_nonrt_pixelformat,
     Validate_imagedesc_msaa_but_no_attachment,
-    Validate_imagedesc_depth_3d_image,
-    Validate_imagedesc_attachment_expect_immutable,
-    Validate_imagedesc_attachment_expect_no_data,
     Validate_imagedesc_attachment_pixelformat,
-    Validate_imagedesc_attachment_resolve_expect_no_msaa,
     Validate_imagedesc_attachment_no_msaa_support,
     Validate_imagedesc_attachment_msaa_num_mipmaps,
     Validate_imagedesc_attachment_msaa_3d_image,
     Validate_imagedesc_attachment_msaa_cube_image,
     Validate_imagedesc_attachment_msaa_array_image,
-    Validate_imagedesc_storageimage_expect_immutable,
-    Validate_imagedesc_storageimage_expect_no_data,
     Validate_imagedesc_storageimage_pixelformat,
     Validate_imagedesc_storageimage_expect_no_msaa,
-    Validate_imagedesc_injected_no_data,
-    Validate_imagedesc_writable_no_data,
     Validate_samplerdesc_canary,
     Validate_samplerdesc_anistropic_requires_linear_filtering,
     Validate_shaderdesc_canary,
@@ -2977,7 +2991,6 @@ enum LogItem {
     Validate_beginpass_resolveattachmentview_image_alive,
     Validate_beginpass_resolveattachmentview_image_valid,
     Validate_beginpass_resolveattachmentview_sizes,
-    Validate_beginpass_depthstencilattachmentviews_continuous,
     Validate_beginpass_depthstencilattachmentview_alive,
     Validate_beginpass_depthstencilattachmentview_valid,
     Validate_beginpass_depthstencilattachmentview_type,
@@ -3081,7 +3094,6 @@ enum LogItem {
     Validate_dispatch_numgroupsx,
     Validate_dispatch_numgroupsy,
     Validate_dispatch_numgroupsz,
-    Validate_dispatch_required_bindings_or_uniforms_missing,
     Validate_dispatch_write_buffer_transient_missing,
     Validate_dispatch_write_image_transient_missing,
     Validate_writebufferunsealed_usage,
@@ -3097,6 +3109,7 @@ enum LogItem {
     Validate_writeimageunsealed_usage,
     Validate_writeimagetransient_usage,
     Validate_writeimagetransient_write_before_bind,
+    Validate_writeimagetransient_write_before_copy,
     Validate_writeimage_src_data_pointer,
     Validate_writeimage_src_data_size,
     Validate_writeimage_bytesperrow,
@@ -3130,6 +3143,7 @@ enum LogItem {
     Validate_copybuffertobuffer_src_overflow,
     Validate_copybuffertobuffer_dst_overflow,
     Validate_copybuffertobuffer_webgl2_index_buffer,
+    Validate_copybuffertoimage_depth_format_not_allowed,
     Validate_copybuffertoimage_webgl2_index_buffer,
     Validate_copybuffertoimage_bytesperrow_too_small,
     Validate_copybuffertoimage_bytesperslice_too_small,
@@ -3157,6 +3171,45 @@ enum LogItem {
     Validate_copybuffertoimage_dst_width_overflow,
     Validate_copybuffertoimage_dst_height_overflow,
     Validate_copybuffertoimage_dst_numslices_overflow,
+    Validate_copyimagetoimage_src_vs_dst_image,
+    Validate_copyimagetoimage_inside_pass,
+    Validate_copyimagetoimage_copy_src,
+    Validate_copyimagetoimage_copy_dst,
+    Validate_copyimagetoimage_3d_vs_other,
+    Validate_copyimagetoimage_src_vs_dst_format,
+    Validate_copyimagetoimage_src_vs_dst_sample_count,
+    Validate_copyimagetoimage_renderable,
+    Validate_copyimagetoimage_msaa,
+    Validate_copyimagetoimage_whole_miplevel,
+    Validate_copyimagetoimage_src_vs_dst_size,
+    Validate_copyimagetoimage_src_miplevel,
+    Validate_copyimagetoimage_src_width,
+    Validate_copyimagetoimage_src_height,
+    Validate_copyimagetoimage_dst_miplevel,
+    Validate_copyimagetoimage_dst_width,
+    Validate_copyimagetoimage_dst_height,
+    Validate_copyimagetoimage_src_width_multiple,
+    Validate_copyimagetoimage_src_height_multiple,
+    Validate_copyimagetoimage_dst_width_multiple,
+    Validate_copyimagetoimage_dst_height_multiple,
+    Validate_copyimagetoimage_src_numslices,
+    Validate_copyimagetoimage_dst_numslices,
+    Validate_copyimagetoimage_src_x_range,
+    Validate_copyimagetoimage_dst_x_range,
+    Validate_copyimagetoimage_src_y_range,
+    Validate_copyimagetoimage_dst_y_range,
+    Validate_copyimagetoimage_src_x_alignment,
+    Validate_copyimagetoimage_dst_x_alignment,
+    Validate_copyimagetoimage_src_y_alignment,
+    Validate_copyimagetoimage_dst_y_alignment,
+    Validate_copyimagetoimage_src_slice_range,
+    Validate_copyimagetoimage_dst_slice_range,
+    Validate_copyimagetoimage_src_width_overflow,
+    Validate_copyimagetoimage_dst_width_overflow,
+    Validate_copyimagetoimage_src_height_overflow,
+    Validate_copyimagetoimage_dst_height_overflow,
+    Validate_copyimagetoimage_src_numslices_overflow,
+    Validate_copyimagetoimage_dst_numslices_overflow,
     Validation_failed,
 }
 /++
@@ -3560,6 +3613,10 @@ void copyBufferToBuffer(scope ref CopyBufferToBufferDesc desc) @trusted @nogc no
 extern(C) void sg_copy_buffer_to_image(const CopyBufferToImageDesc* desc) @system @nogc nothrow pure;
 void copyBufferToImage(scope ref CopyBufferToImageDesc desc) @trusted @nogc nothrow pure {
     sg_copy_buffer_to_image(&desc);
+}
+extern(C) void sg_copy_image_to_image(const CopyImageToImageDesc* desc) @system @nogc nothrow pure;
+void copyImageToImage(scope ref CopyImageToImageDesc desc) @trusted @nogc nothrow pure {
+    sg_copy_image_to_image(&desc);
 }
 /++
 + getting information
