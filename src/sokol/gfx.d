@@ -67,7 +67,6 @@ enum num_inflight_frames = 2;
 enum max_color_attachments = 8;
 enum max_uniformblock_members = 16;
 enum max_vertex_attributes = 16;
-enum max_mipmaps = 16;
 enum max_vertexbuffer_bindslots = 8;
 enum max_uniformblock_bindslots = 8;
 enum max_view_bindslots = 32;
@@ -251,7 +250,7 @@ extern(C) struct Features {
     bool vertexformat_int10_n2 = false;
     bool copy_buffer_to_image_relaxed_buffer_type = false;
     bool copy_buffer_to_image_relaxed_bytes_per_row = false;
-    bool copy_image_to_image_relaxed = false;
+    bool copy_image_to_image_relaxed_pixel_format = false;
     bool gl_texture_views = false;
 }
 /++
@@ -1261,7 +1260,7 @@ extern(C) struct BufferDesc {
 +         the image can be used as parent resource of a storage-image-view,
 +         which allows compute shaders to write to the image in a compute
 +         pass (for read-only access in compute shaders bind the image
-+         via a texture view instead
++         via a texture view instead)
 +     .color_attachment (default: false)
 +         the image can be used as parent resource of a color-attachment-view,
 +         which is then passed into sg_begin_pass via sg_pass.attachments.colors[]
@@ -1287,11 +1286,11 @@ extern(C) struct BufferDesc {
 +         same frame by the GPU-side and doesn't need to survive into the next
 +         frame
 +     .copy_src (default: false)
-+         TODO: currently unused, will become useful when the rest of the
-+         sg_copy_* functions are implemented
++         the image is going to be used as source in an `sg_copy_image_to_image()`
++         call
 +     .copy_dst (default: false)
 +         the image is going to be used as destination in an `sg_copy_buffer_to_image()`
-+         call
++         or `sg_copy_image_to_image()` call
 + 
 +     Note that creating a texture view from the image to be used for
 +     texture-sampling in vertex-, fragment- or compute-shaders
@@ -1551,7 +1550,8 @@ extern(C) struct CopyBufferToBufferDesc {
 +     Caveats (all checked by the validation layer or via logged errors and warnings):
 +         - sg_copy_buffer_to_image() must be called outside a pass
 +         - for compressed image formats, .size.width and .size.height must be
-+           a multiple of the compression block size
++           a multiple of the compression block size or fall on the mip level
++           width / height
 +         - the source buffer must have been created with .usage.copy_src
 +         - the destination image must have been created with .usage.copy_dst
 +         - the source buffer type cannot be .usage.staging_index_buffer
@@ -1583,7 +1583,50 @@ extern(C) struct CopyBufferToImageDesc {
 /++
 + sg_copy_image_to_image_desc
 + 
-+     FIXME
++     Describes an image-to-image copy operation via sg_copy_image_to_image().
++ 
++     .src
++         .image          the source image
++         .mip_level      the source mip level
++         .x, .y          the source x,y location
++         .slice          the array or 3d slice
++     .dst
++         .image          the destination image
++         .mip_level      the destination mip level
++         .x, .y          the destination x,y location
++         .slice          the array or 3d slice
++     .size
++         .width          copy region width in pixels
++         .height         copy region height in pixels
++         .num_slices     number of array or 3d slices to copy
++ 
++     Note on default values:
++ 
++         .size
++             The size default is the 'rest after offset' for the source mip
++             level, e.g.:
++                 .size.width = src_mip_width - .src.x
++                 .size.height = src_mip_height - .src.y
++                 .size.num_slices = src_mip_depth_or_slices - .src.slice
++ 
++     Caveats (all checked by the validation layer):
++         - sg_copy_image_to_image() must be called outside a pass
++         - for compressed image formats, .size.width and .size.height must be
++           a multiple of the compression block size or fall on the mip level
++           width / height
++         - the source and destination image must not be the same
++         - the source image must have been created with .usage.copy_src
++         - the destination image must have been created with .usage.copy_dst
++         - the source and destination image pixel format must be identical
++         - copying between 3D images and non-3D-images is not allowed
++         - copying between multi-sampled images is not allowed
++         - copying into pass attachments is not allowed (from pass attachments
++           is fine)
++         - when sg_features.copy_image_to_image_relaxed_pixel_format is false, the
++           pixel format must be renderable (this restriction applies to GL < 4.3
++           and GLES < 3.2, e.g. also on WebGL2)
++         - when copying between depth- or depth-stencil-images, only
++           entire mip levels can be copied
 +/
 extern(C) struct CopyImageToImageDesc {
     ImageLocation src = {};
@@ -1598,7 +1641,7 @@ extern(C) struct CopyImageToImageDesc {
 +     The default configuration is:
 + 
 +     .type               SG_IMAGETYPE_2D
-+     .usage              { .texture = true }
++     .usage              all false (implies usage as regular texture)
 +     .width              0 (must be set to >0)
 +     .height             0 (must be set to >0)
 +     .num_slices         1 (3D textures: depth; array textures: number of layers)
@@ -1622,7 +1665,7 @@ extern(C) struct CopyImageToImageDesc {
 +     When initial data is provided via sg_image_desc.data, it must be the complete
 +     and tightly packed data for all mip levels and slices in one continuous block
 +     of memory. For a more flexible initialization of the initial image content,
-+     use sg_write_image_unsealed().
++     use sg_write_image_unsealed() instead.
 + 
 +     The size of a single surface in a mip-level for a regular 2D texture
 +     can be computed via:
@@ -1635,7 +1678,7 @@ extern(C) struct CopyImageToImageDesc {
 + 
 +     For 3d-images the size of a single miplevel is:
 + 
-+         mip_slices * sg_query_surface_pitch(pixel_format, mip_width, mip_height, 1);
++         max(1, num_slices >> mip_level) * sg_query_surface_pitch(pixel_format, mip_width, mip_height, 1);
 + 
 +     For cubemap-images the size of a single mip-level is:
 + 
@@ -1651,10 +1694,9 @@ extern(C) struct CopyImageToImageDesc {
 +         [5] => -Z
 + 
 + 
-+     Images with usage.*_attachment or usage.storage_image must
-+     *not* be created with initial content. Be aware that the initial
-+     content of pass attachment and storage images is undefined
-+     (not guaranteed to be zeroed).
++     Images with usage.*_attachment must *not* be created with initial content.
++     Be aware that the initial content of pass attachments and storage images
++     without initial data is undefined (not guaranteed to be zeroed).
 + 
 +     ADVANCED TOPIC: Injecting native 3D-API textures:
 + 
@@ -2402,9 +2444,6 @@ extern(C) struct FrameStatsD3d11Bindings {
     uint num_cs_set_unordered_access_views = 0;
     uint num_om_set_rts_and_uavs = 0;
 }
-extern(C) struct FrameStatsD3d11Uniforms {
-    uint num_update_subresource = 0;
-}
 extern(C) struct FrameStatsD3d11Draw {
     uint num_draw_indexed_instanced = 0;
     uint num_draw_indexed = 0;
@@ -2415,8 +2454,9 @@ extern(C) struct FrameStatsD3d11 {
     FrameStatsD3d11Pass pass = {};
     FrameStatsD3d11Pipeline pipeline = {};
     FrameStatsD3d11Bindings bindings = {};
-    FrameStatsD3d11Uniforms uniforms = {};
     FrameStatsD3d11Draw draw = {};
+    uint num_update_subresource = 0;
+    uint num_copy_subresource_region = 0;
     uint num_map = 0;
     uint num_unmap = 0;
 }
@@ -2802,7 +2842,6 @@ enum LogItem {
     Validate_imagedesc_depthformat_attachment_or_copydst,
     Validate_imagedesc_depthstencil_attachment_pixelformat,
     Validate_imagedesc_depthstencil_attachment_vs_storageimage,
-    Validate_imagedesc_storageimage_vs_initialdata,
     Validate_imagedesc_storageimage_vs_writetransient,
     Validate_imagedesc_writetransient_vs_copydst,
     Validate_imagedesc_writetransient_vs_initialdata,
@@ -2819,8 +2858,10 @@ enum LogItem {
     Validate_imagedesc_imagetype_3d_numslices,
     Validate_imagedesc_width,
     Validate_imagedesc_height,
+    Validate_imagedesc_num_mipmaps,
     Validate_imagedesc_msaa_but_no_attachment,
     Validate_imagedesc_attachment_pixelformat,
+    Validate_imagedesc_attachment_msaa_vs_copy,
     Validate_imagedesc_attachment_no_msaa_support,
     Validate_imagedesc_attachment_msaa_num_mipmaps,
     Validate_imagedesc_attachment_msaa_3d_image,
@@ -2925,10 +2966,6 @@ enum LogItem {
     Validate_viewdesc_texture_cubemap_slices,
     Validate_viewdesc_texture_array_slices,
     Validate_viewdesc_texture_3d_slices,
-    Validate_viewdesc_storageimage_pixelformat,
-    Validate_viewdesc_colorattachment_pixelformat,
-    Validate_viewdesc_depthstencilattachment_pixelformat,
-    Validate_viewdesc_resolveattachment_samplecount,
     Validate_beginpass_canary,
     Validate_beginpass_computepass_expect_no_attachments,
     Validate_beginpass_swapchain_expect_width,
@@ -3143,6 +3180,7 @@ enum LogItem {
     Validate_copybuffertobuffer_src_overflow,
     Validate_copybuffertobuffer_dst_overflow,
     Validate_copybuffertobuffer_webgl2_index_buffer,
+    Validate_copybuffertobuffer_src_transient_missing,
     Validate_copybuffertoimage_depth_format_not_allowed,
     Validate_copybuffertoimage_webgl2_index_buffer,
     Validate_copybuffertoimage_bytesperrow_too_small,
@@ -3171,13 +3209,13 @@ enum LogItem {
     Validate_copybuffertoimage_dst_width_overflow,
     Validate_copybuffertoimage_dst_height_overflow,
     Validate_copybuffertoimage_dst_numslices_overflow,
+    Validate_copybuffertoimage_src_transient_missing,
     Validate_copyimagetoimage_src_vs_dst_image,
     Validate_copyimagetoimage_inside_pass,
     Validate_copyimagetoimage_copy_src,
     Validate_copyimagetoimage_copy_dst,
     Validate_copyimagetoimage_3d_vs_other,
     Validate_copyimagetoimage_src_vs_dst_format,
-    Validate_copyimagetoimage_src_vs_dst_sample_count,
     Validate_copyimagetoimage_renderable,
     Validate_copyimagetoimage_msaa,
     Validate_copyimagetoimage_whole_miplevel,
@@ -3210,6 +3248,7 @@ enum LogItem {
     Validate_copyimagetoimage_dst_height_overflow,
     Validate_copyimagetoimage_src_numslices_overflow,
     Validate_copyimagetoimage_dst_numslices_overflow,
+    Validate_copyimagetoimage_src_transient_missing,
     Validation_failed,
 }
 /++
