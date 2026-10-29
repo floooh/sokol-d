@@ -474,7 +474,7 @@ void buildLibSokol(LibSokolOptions opts) @safe
             lflags ~= opts.backend == SokolBackend.vulkan ? ["-lvulkan"] : [
                 "-lGL"
             ];
-            lflags ~= ["-lX11", "-lXi", "-lXcursor", "-lasound", "-lm", "-ldl"];
+            lflags ~= ["-lX11", "-lXi", "-lXcursor", "-lpulse-simple", "-lpulse", "-lm", "-ldl"];
         }
 
         if (isMac)
