@@ -117,7 +117,8 @@
 				"GL",
 				"Xi",
 				"Xcursor",
-				"asound",
+				"pulse-simple",
+				"pulse",
 				"m",
 				"dl"
 			],
@@ -178,7 +179,8 @@
 				"GL",
 				"Xi",
 				"Xcursor",
-				"asound",
+				"pulse-simple",
+				"pulse",
 				"m",
 				"dl"
 			],
@@ -222,7 +224,8 @@
 				"wayland-egl",
 				"wayland-cursor",
 				"xkbcommon",
-				"asound",
+				"pulse-simple",
+				"pulse",
 				"m",
 				"dl"
 			],
@@ -263,7 +266,8 @@
 				"wayland-egl",
 				"wayland-cursor",
 				"xkbcommon",
-				"asound",
+				"pulse-simple",
+				"pulse",
 				"m",
 				"dl"
 			],
@@ -308,7 +312,8 @@
 				"vulkan",
 				"Xi",
 				"Xcursor",
-				"asound",
+				"pulse-simple",
+				"pulse",
 				"m",
 				"dl"
 			],
@@ -357,7 +362,8 @@
 				"GL",
 				"Xi",
 				"Xcursor",
-				"asound",
+				"pulse-simple",
+				"pulse",
 				"m",
 				"dl"
 			],
@@ -423,7 +429,8 @@
 				"GL",
 				"Xi",
 				"Xcursor",
-				"asound",
+				"pulse-simple",
+				"pulse",
 				"m",
 				"dl"
 			],
@@ -497,7 +504,8 @@
 				"vulkan",
 				"Xi",
 				"Xcursor",
-				"asound",
+				"pulse-simple",
+				"pulse",
 				"m",
 				"dl"
 			],
@@ -650,7 +658,8 @@
 				"GL",
 				"Xi",
 				"Xcursor",
-				"asound",
+				"pulse-simple",
+				"pulse",
 				"m",
 				"dl"
 			],
@@ -713,7 +722,8 @@
 				"GL",
 				"Xi",
 				"Xcursor",
-				"asound",
+				"pulse-simple",
+				"pulse",
 				"m",
 				"dl"
 			],
@@ -785,7 +795,8 @@
 				"vulkan",
 				"Xi",
 				"Xcursor",
-				"asound",
+				"pulse-simple",
+				"pulse",
 				"m",
 				"dl"
 			],
