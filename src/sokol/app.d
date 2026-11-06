@@ -48,6 +48,7 @@ enum EventType {
     Quit_requested,
     Clipboard_pasted,
     Files_dropped,
+    Android_back,
     Num,
 }
 /++
