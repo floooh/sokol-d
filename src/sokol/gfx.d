@@ -70,7 +70,7 @@ enum max_vertex_attributes = 16;
 enum max_vertexbuffer_bindslots = 8;
 enum max_uniformblock_bindslots = 8;
 enum max_view_bindslots = 32;
-enum max_sampler_bindslots = 12;
+enum max_sampler_bindslots = 14;
 enum max_texture_sampler_pairs = 32;
 enum max_portable_color_attachments = 4;
 enum max_portable_texture_bindings_per_stage = 16;
@@ -1135,14 +1135,12 @@ enum PassState {
 +     chunks of vertex- and/or index-data into the same buffer objects.
 +/
 extern(C) struct Bindings {
-    uint _start_canary = 0;
     Buffer[8] vertex_buffers = [];
     int[8] vertex_buffer_offsets = [0, 0, 0, 0, 0, 0, 0, 0];
     Buffer index_buffer = {};
     int index_buffer_offset = 0;
     View[32] views = [];
-    Sampler[12] samplers = [];
-    uint _end_canary = 0;
+    Sampler[14] samplers = [];
 }
 /++
 + sg_buffer_usage
@@ -1878,8 +1876,8 @@ extern(C) struct SamplerDesc {
 +         - the shader stage the sampler appears in (SG_SHADERSTAGE_*)
 +         - the sampler type (SG_SAMPLERTYPE_*)
 +         - backend specific bindslots:
-+             - HLSL: the sampler register `register(s0..11)`
-+             - MSL: the sampler attribute `[[sampler(0..11)]]`
++             - HLSL: the sampler register `register(s0..13)`
++             - MSL: the sampler attribute `[[sampler(0..13)]]`
 +             - WGSL: the binding in `@group(1) @binding(0..127)`
 + 
 +     - reflection information for each texture-sampler pair used by
@@ -2025,7 +2023,7 @@ extern(C) struct ShaderDesc {
     ShaderVertexAttr[16] attrs = [];
     ShaderUniformBlock[8] uniform_blocks = [];
     ShaderView[32] views = [];
-    ShaderSampler[12] samplers = [];
+    ShaderSampler[14] samplers = [];
     ShaderTextureSamplerPair[32] texture_sampler_pairs = [];
     MtlShaderThreadsPerThreadgroup mtl_threads_per_threadgroup = {};
     const(char)* label = null;

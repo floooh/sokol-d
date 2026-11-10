@@ -131,7 +131,7 @@ extern(C) struct RenderDesc {
     bool use_nearest_filter = false;
     sg.Pipeline pip = {};
     sg.View[32] views = [];
-    sg.Sampler[12] samplers = [];
+    sg.Sampler[14] samplers = [];
     sg.Range[8] uniforms = [];
 }
 /++
