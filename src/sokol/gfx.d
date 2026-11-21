@@ -246,6 +246,8 @@ extern(C) struct Features {
     bool separate_buffer_types = false;
     bool draw_base_vertex = false;
     bool draw_base_instance = false;
+    bool draw_indirect_base_instance = false;
+    bool draw_indirect_index_buffer_offset = false;
     bool dual_source_blending = false;
     bool vertexformat_int10_n2 = false;
     bool copy_buffer_to_image_relaxed_buffer_type = false;
@@ -1154,6 +1156,13 @@ extern(C) struct Bindings {
 +     .storage_buffer (default: false)
 +         the buffer will be bound as storage buffer via storage-buffer-view
 +         in sg_bindings.views[]
++     .indirect_buffer (default: false)
++         the buffer will be used to provide indirect draw- or dispatch-
++         parameters in sg_draw_indirect() or sg_dispatch_indirect().
++         Requires sg_features.compute, and the buffer size must be
++         a multiple of 4. Combine with .storage_buffer to write the arguments
++         in a compute shader. Cannot be combined with .staging_buffer or
++         .staging_index_buffer.
 +     .staging_buffer (default: false)
 +         the buffer cannot be bound as rendering or compute resource and
 +         can only be used as copy source, used together with .write_transient
@@ -1185,6 +1194,7 @@ extern(C) struct BufferUsage {
     bool vertex_buffer = false;
     bool index_buffer = false;
     bool storage_buffer = false;
+    bool indirect_buffer = false;
     bool staging_buffer = false;
     bool staging_index_buffer = false;
     bool write_unsealed = false;
@@ -2264,6 +2274,56 @@ extern(C) struct ViewDesc {
     uint _end_canary = 0;
 }
 /++
++ sg_draw_indirect_args
++     sg_draw_indirect_indexed_args
++     sg_dispatch_indirect_args
++ 
++     These are reference structs which define the layout of
++     indirect draw and dispatch arguments in indirect buffers. The
++     struct members have the same meaning as the same-named arguments
++     of sg_draw_ex() and sg_dispatch():
++ 
++     sg_draw_indirect_args: for non-indexed draws (16 bytes)
++         .num_elements:  number of vertices
++         .num_instances: number of instances
++         .base_element:  first vertex
++         .base_instance: first instance
++ 
++     sg_draw_indirect_indexed_args: for indexed draws (20 bytes)
++         .num_elements:  number of indices
++         .num_instances: number of instances
++         .base_element:  first index in the index buffer
++         .base_vertex:   signed value added to each index
++         .base_instance: first instance
++ 
++     sg_dispatch_indirect_args: for dispatches (12 bytes)
++         .num_groups_x/y/z: number of workgroups
++ 
++     The pipeline's index type selects the indexed or non-indexed
++     draw layout.
++ 
++     For details and caveats of indirect draw and dispatch
++     see the documentation section `ON INDIRECT DRAW AND DISPATCH`!
++/
+extern(C) struct DrawIndirectArgs {
+    uint num_elements = 0;
+    uint num_instances = 0;
+    uint base_element = 0;
+    uint base_instance = 0;
+}
+extern(C) struct DrawIndirectIndexedArgs {
+    uint num_elements = 0;
+    uint num_instances = 0;
+    uint base_element = 0;
+    int base_vertex = 0;
+    uint base_instance = 0;
+}
+extern(C) struct DispatchIndirectArgs {
+    uint num_groups_x = 0;
+    uint num_groups_y = 0;
+    uint num_groups_z = 0;
+}
+/++
 + sg_trace_hooks
 + 
 +     Installable callback functions to keep track of the sokol-gfx calls,
@@ -2307,7 +2367,9 @@ extern(C) struct TraceHooks {
     extern(C) void function(int, const Range*, void*) apply_uniforms = null;
     extern(C) void function(int, int, int, void*) draw = null;
     extern(C) void function(int, int, int, int, int, void*) draw_ex = null;
+    extern(C) void function(Buffer, int, void*) draw_indirect = null;
     extern(C) void function(int, int, int, void*) dispatch = null;
+    extern(C) void function(Buffer, int, void*) dispatch_indirect = null;
     extern(C) void function(void*) end_pass = null;
     extern(C) void function(void*) commit = null;
     extern(C) void function(Buffer, void*) alloc_buffer = null;
@@ -2450,12 +2512,19 @@ extern(C) struct FrameStatsD3d11Draw {
     uint num_draw_indexed = 0;
     uint num_draw_instanced = 0;
     uint num_draw = 0;
+    uint num_draw_indexed_instanced_indirect = 0;
+    uint num_draw_instanced_indirect = 0;
+}
+extern(C) struct FrameStatsD3d11Dispatch {
+    uint num_dispatch = 0;
+    uint num_dispatch_indirect = 0;
 }
 extern(C) struct FrameStatsD3d11 {
     FrameStatsD3d11Pass pass = {};
     FrameStatsD3d11Pipeline pipeline = {};
     FrameStatsD3d11Bindings bindings = {};
     FrameStatsD3d11Draw draw = {};
+    FrameStatsD3d11Dispatch dispatch = {};
     uint num_update_subresource = 0;
     uint num_copy_subresource_region = 0;
     uint num_map = 0;
@@ -2577,7 +2646,9 @@ extern(C) struct FrameStats {
     uint num_apply_uniforms = 0;
     uint num_draw = 0;
     uint num_draw_ex = 0;
+    uint num_draw_indirect = 0;
     uint num_dispatch = 0;
+    uint num_dispatch_indirect = 0;
     uint num_write_buffer_transient = 0;
     uint num_write_image_transient = 0;
     uint num_write_buffer_unsealed = 0;
@@ -2793,6 +2864,8 @@ enum LogItem {
     Copy_image_to_image_dst_alive,
     Copy_image_to_image_src_valid,
     Copy_image_to_image_dst_valid,
+    Draw_indirect_buffer_alive,
+    Dispatch_indirect_buffer_alive,
     Shaderdesc_too_many_vertexstage_textures,
     Shaderdesc_too_many_fragmentstage_textures,
     Shaderdesc_too_many_computestage_textures,
@@ -2810,6 +2883,7 @@ enum LogItem {
     Validate_bufferdesc_staging_vs_vertexbuffer,
     Validate_bufferdesc_staging_vs_indexbuffer,
     Validate_bufferdesc_staging_vs_storagebuffer,
+    Validate_bufferdesc_staging_vs_indirectbuffer,
     Validate_bufferdesc_staging_vs_injected,
     Validate_bufferdesc_staging_vs_copydst,
     Validate_bufferdesc_staging_vs_initialdata,
@@ -2826,6 +2900,8 @@ enum LogItem {
     Validate_bufferdesc_expect_data,
     Validate_bufferdesc_storagebuffer_supported,
     Validate_bufferdesc_storagebuffer_size_multiple_4,
+    Validate_bufferdesc_indirectbuffer_supported,
+    Validate_bufferdesc_indirectbuffer_size_multiple_4,
     Validate_imagedesc_data_size,
     Validate_imagedesc_canary,
     Validate_imagedesc_any_attachment_vs_copydst,
@@ -3126,16 +3202,37 @@ enum LogItem {
     Validate_draw_required_bindings_or_uniforms_missing,
     Validate_draw_write_buffer_transient_missing,
     Validate_draw_write_image_transient_missing,
+    Validate_draw_indirect_renderpass_expected,
+    Validate_draw_indirect_buffer_usage,
+    Validate_draw_indirect_offset_range,
+    Validate_draw_indirect_offset_multiple_4,
+    Validate_draw_indirect_index_buffer_offset,
+    Validate_draw_indirect_required_bindings_or_uniforms_missing,
+    Validate_draw_indirect_write_buffer_transient_missing,
+    Validate_draw_indirect_write_image_transient_missing,
+    Validate_draw_indirect_buffer_write_buffer_transient_missing,
+    Validate_draw_indirect_buffer_vs_sbview_readwrite,
     Validate_dispatch_computepass_expected,
     Validate_dispatch_numgroupsx,
     Validate_dispatch_numgroupsy,
     Validate_dispatch_numgroupsz,
+    Validate_dispatch_required_bindings_or_uniforms_missing,
     Validate_dispatch_write_buffer_transient_missing,
     Validate_dispatch_write_image_transient_missing,
+    Validate_dispatch_indirect_computepass_expected,
+    Validate_dispatch_indirect_buffer_usage,
+    Validate_dispatch_indirect_offset_range,
+    Validate_dispatch_indirect_offset_multiple_4,
+    Validate_dispatch_indirect_required_bindings_or_uniforms_missing,
+    Validate_dispatch_indirect_write_buffer_transient_missing,
+    Validate_dispatch_indirect_write_image_transient_missing,
+    Validate_dispatch_indirect_buffer_write_buffer_transient_missing,
+    Validate_dispatch_indirect_buffer_vs_sbview_readwrite,
     Validate_writebufferunsealed_usage,
     Validate_writebuffertransient_usage,
     Validate_writebuffertransient_write_before_bind,
     Validate_writebuffertransient_write_before_copy,
+    Validate_writebuffertransient_write_before_indirect,
     Validate_writebuffertransient_dst_offset_alignment,
     Validate_writebuffer_src_data_pointer,
     Validate_writebuffer_src_data_size,
@@ -3605,9 +3702,17 @@ extern(C) void sg_draw_ex(int base_element, int num_elements, int num_instances,
 void drawEx(int base_element, int num_elements, int num_instances, int base_vertex, int base_instance) @trusted @nogc nothrow pure {
     sg_draw_ex(base_element, num_elements, num_instances, base_vertex, base_instance);
 }
+extern(C) void sg_draw_indirect(Buffer buf, int offset) @system @nogc nothrow pure;
+void drawIndirect(Buffer buf, int offset) @trusted @nogc nothrow pure {
+    sg_draw_indirect(buf, offset);
+}
 extern(C) void sg_dispatch(uint num_groups_x, uint num_groups_y, uint num_groups_z) @system @nogc nothrow pure;
 void dispatch(uint num_groups_x, uint num_groups_y, uint num_groups_z) @trusted @nogc nothrow pure {
     sg_dispatch(num_groups_x, num_groups_y, num_groups_z);
+}
+extern(C) void sg_dispatch_indirect(Buffer buf, int offset) @system @nogc nothrow pure;
+void dispatchIndirect(Buffer buf, int offset) @trusted @nogc nothrow pure {
+    sg_dispatch_indirect(buf, offset);
 }
 extern(C) void sg_end_pass() @system @nogc nothrow pure;
 void endPass() @trusted @nogc nothrow pure {

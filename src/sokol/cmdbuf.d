@@ -209,11 +209,25 @@ void drawEx(Cmdbuf cb, int base_element, int num_elements, int num_instances, in
     scb_draw_ex(cb, base_element, num_elements, num_instances, base_vertex, base_instance);
 }
 /++
++ record draw-indirect command
++/
+extern(C) void scb_draw_indirect(Cmdbuf cb, sg.Buffer buf, int offset) @system @nogc nothrow pure;
+void drawIndirect(Cmdbuf cb, sg.Buffer buf, int offset) @trusted @nogc nothrow pure {
+    scb_draw_indirect(cb, buf, offset);
+}
+/++
 + record dispatch command
 +/
 extern(C) void scb_dispatch(Cmdbuf cb, int num_groups_x, int num_groups_y, int num_groups_z) @system @nogc nothrow pure;
 void dispatch(Cmdbuf cb, int num_groups_x, int num_groups_y, int num_groups_z) @trusted @nogc nothrow pure {
     scb_dispatch(cb, num_groups_x, num_groups_y, num_groups_z);
+}
+/++
++ record dispatch-indirect command
++/
+extern(C) void scb_dispatch_indirect(Cmdbuf cb, sg.Buffer buf, int offset) @system @nogc nothrow pure;
+void dispatchIndirect(Cmdbuf cb, sg.Buffer buf, int offset) @trusted @nogc nothrow pure {
+    scb_dispatch_indirect(cb, buf, offset);
 }
 /++
 + query command buffer resource state (valid, failed, invalid)
